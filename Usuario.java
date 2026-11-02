@@ -1,3 +1,5 @@
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +20,8 @@ public class Usuario {
         ID++;
         this.nome = nome;
         this.email = email;
-        this.senha = senha;
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        this.senha = encoder.encode(senha);;
         this.type = tipo;
     }
 
