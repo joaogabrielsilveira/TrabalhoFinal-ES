@@ -8,8 +8,10 @@ public class Sistema {
 
     Usuario user = null;
     private List<Usuario> u;
+    public static Scanner sc = new Scanner(System.in);
+
     public Sistema() {
-        
+        u = Banco.recuperar_usuarios();
     }
 
     public void registrar_usuario(Usuario u) {
@@ -36,13 +38,13 @@ public class Sistema {
                 .get()
                 .getSenha();
             
-            ok = encoder.matches("senha", hash);
+            ok = encoder.matches(senha, hash);
         }
 
         return ok;
     }
 
-    public int lerEscolha(String[] escolhas, Scanner sc) {
+    public int lerEscolha(String[] escolhas) {
         String msg = "Selecione uma opção:";
         int numEscolhas = escolhas.length;
         for (int i = 0; i < numEscolhas; i++) {
@@ -63,36 +65,79 @@ public class Sistema {
             System.out.println("Escolha inválida, tente novamente.\n");
         }
 
+        sc.nextLine();
+
         return valid ? escolha : -1;
     }
 
-    public boolean loopLogin(Scanner sc) {
-        sc.nextLine();
+    public boolean loopLogin() {
         System.out.print("Digite o nome de usuário: ");
-        String nome = sc.nextLine();
+        String email = sc.nextLine();
         System.out.print("Digite a senha: ");
         String senha = sc.nextLine();
-        boolean sucesso = login(nome, senha);
+        boolean sucesso = login(email, senha);
         if (!sucesso) {
             System.out.println("Usuário ou senha incorretos, tente novamente");
         }
         else {
-            System.out.println(String.format("Login realizado com sucesso."));
+            Usuario logged = u.stream()
+                .filter(usuario -> usuario.getEmail().equals(email))
+                .findFirst()
+                .get();
+            user = logged;
+            System.out.println(String.format("Login do usuário %s realizado com sucesso.", user.getNome()));
         }
 
         return sucesso;
     }
 
+    public void loopUsuario() {
+        boolean ativo = true;
+        String[] opcoes = new String[]{};
+        switch (user.getTipo()) {
+            case Avaliador:
+                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Ver mensagens", "Logout"};
+                break;
+            case Cliente:
+                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Ver mensagens", "Logout"};
+                break;
+            case Desenvolvedor:
+                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Ver mensagens", "Logout"};
+                break;
+            default:
+                break;
+        }  
+        while (ativo) {
+            int escolha;
+            escolha = lerEscolha(opcoes);
+            if (escolha == opcoes.length) {
+                System.out.println(String.format("Usuário %s deslogado com sucesso", user.getNome()));
+                user = null;
+                ativo = false;
+            }
+            switch (user.getTipo()) {
+                case Avaliador:
+                    break;
+                case Cliente:
+                    break;
+                case Desenvolvedor:
+                    break;
+                default:
+                    break;
+
+            }   
+        }
+    }
+
     public void loopSistema() {
-        Scanner sc = new Scanner(System.in);
         boolean ativo = true;
         int escolha;
         while (ativo) {
-            escolha = lerEscolha(new String[] {"Login", "Sair"}, sc);
+            escolha = lerEscolha(new String[] {"Login", "Sair"});
             switch (escolha) {
                 case 1:
-                    if (loopLogin(sc)) {
-                        
+                    if (loopLogin()) {
+                        loopUsuario();
                     }
                     else {
                         continue;
@@ -105,6 +150,7 @@ public class Sistema {
                     break;
             }
         }
+        System.out.println("Saindo do sistema");
         sc.close();
     }
 }

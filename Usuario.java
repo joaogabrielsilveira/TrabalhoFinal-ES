@@ -1,3 +1,5 @@
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 public class Usuario {
 
     private static int ID = 0;
@@ -12,7 +14,8 @@ public class Usuario {
         ID++;
         this.nome = nome;
         this.email = email;
-        this.senha = senha;
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        this.senha = encoder.encode(senha);;
         this.tipo = tipo;
     }
 
