@@ -16,6 +16,10 @@ public class Usuario {
         this.tipo = tipo;
     }
 
+    public boolean equals(Usuario outro) {
+        return this.matricula == outro.matricula;
+    }
+
     public void enviar_mensagem(String conteudo, Usuario destinatario) {
 
     }
@@ -39,4 +43,7 @@ public class Usuario {
     public TipoUsuario getTipo() {
         return this.tipo;
     }
+
+
+
 }

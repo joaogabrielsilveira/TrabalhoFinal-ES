@@ -1,13 +1,29 @@
-import com.google.gson.Gson;
+import com.google.gson.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.lang.reflect.Type;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class Banco {
 
-    private static Gson gson = new Gson();
+    private static Gson gson = new GsonBuilder()
+    .registerTypeAdapter(LocalDateTime.class, new JsonSerializer<LocalDateTime>() {
+        @Override
+        public JsonElement serialize(LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {
+            return new JsonPrimitive(src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        }
+    })
+    .registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
+        @Override
+        public LocalDateTime deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            return LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        }
+    })
+    .create();
 
     public static void salvar_usuario(Usuario novo) {
         Usuario[] array = gson.fromJson(ler("database/usuarios.json"), Usuario[].class);
