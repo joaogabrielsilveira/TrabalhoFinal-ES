@@ -1,13 +1,15 @@
 public class Usuario {
 
-    private int matricula;
+    private static int ID = 0;
+    private final int matricula;
     private String nome;
     private String email;
     private String senha;
     private TipoUsuario tipo;
 
     public Usuario(int matricula, String nome, String email, String senha, TipoUsuario tipo) {
-        this.matricula = matricula;
+        this.matricula = ID;
+        ID++;
         this.nome = nome;
         this.email = email;
         this.senha = senha;
@@ -34,6 +36,7 @@ public class Usuario {
         return this.senha;
     }
 
-
-
+    public TipoUsuario getTipo() {
+        return this.tipo;
+    }
 }

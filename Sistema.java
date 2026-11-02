@@ -1,4 +1,5 @@
 import java.util.List;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 public class Sistema {
 
@@ -7,8 +8,7 @@ public class Sistema {
     public Sistema() {
     }
 
-    public void criar_usuario(Usuario u, String tipo) {
-        //Demais operações
+    public void registrar_usuario(Usuario u) {
 
         Banco.salvar_usuario(u);
     }
@@ -19,7 +19,22 @@ public class Sistema {
         Banco.excluir_usuario(u);
     }
 
-    public void login(String email, String senha) {
+    public boolean login(String email, String senha) {
+        
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        boolean ok = false;
 
+        if(u.stream().anyMatch(usuario -> usuario.getEmail().equals(email))) {
+            
+            String hash = u.stream()
+                .filter(usuario -> usuario.getEmail().equals(email))
+                .findFirst()
+                .get()
+                .getSenha();
+            
+            ok = encoder.matches("senha", hash);
+        }
+
+        return ok;
     }
 }
