@@ -38,24 +38,12 @@ public class Usuario {
         destinatario.mensagensRecebidas.add(novaMensagem);
     }
 
-    public List<Integer> getMensagensRecebidas() {
-        List<Integer> idsMensagensLidas = new ArrayList<>();
-
-        for (Mensagem mensagem : mensagensRecebidas) {
-            idsMensagensLidas.add(mensagem.getId());
-        }
-        
-        return idsMensagensLidas;
+    public List<Mensagem> getMensagensRecebidas() {
+        return this.mensagensRecebidas;
     }
 
-    public List<Integer> getMensagensEnviadas() {
-        List<Integer> idsMensagensEnviadas = new ArrayList<>();
-
-        for (Mensagem mensagem : mensagensEnviadas) {
-            idsMensagensEnviadas.add(mensagem.getId());
-        }
-        
-        return idsMensagensEnviadas;   
+    public List<Mensagem> getMensagensEnviadas() {
+        return this.mensagensEnviadas;
     }
 
     public String getEmail() {
