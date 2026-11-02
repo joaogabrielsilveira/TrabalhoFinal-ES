@@ -5,7 +5,9 @@ public class Usuario {
     private String nome;
     private String email;
     private String senha;
-    private TipoUsuario tipo;
+    private TipoUsuario type;
+    private List<Mensagem> mensagensRecebidas = new ArrayList<>();
+    private List<Mensagem> mensagensEnviadas = new ArrayList<>();
 
     public Usuario(int matricula, String nome, String email, String senha, TipoUsuario tipo) {
         this.matricula = ID;
@@ -13,14 +15,18 @@ public class Usuario {
         this.nome = nome;
         this.email = email;
         this.senha = senha;
-        this.tipo = tipo;
+        this.type = tipo;
     }
 
     public boolean equals(Usuario outro) {
         return this.matricula == outro.matricula;
     }
 
-    public void enviar_mensagem(String conteudo, Usuario destinatario) {
+    public void enviarMensagem(String conteudo, Usuario destinatario) {
+
+        Mensagem novaMensagem = new Mensagem(conteudo, this, destinatario);
+        this.mensagensEnviadas.add(novaMensagem);
+        destinatario.mensagensRecebidas.add(novaMensagem);
 
     }
 
@@ -44,6 +50,7 @@ public class Usuario {
         return this.tipo;
     }
 
-
-
+    public void delete() {
+        Banco.excluirUsuario(this);
+    }
 }

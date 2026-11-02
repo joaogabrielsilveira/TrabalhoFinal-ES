@@ -12,15 +12,15 @@ public class Sistema {
         
     }
 
-    public void registrar_usuario(Usuario u) {
+    public void registrarUsuario(Usuario u) {
 
-        Banco.salvar_usuario(u);
+        Banco.salvarUsuario(u);
     }
 
-    public void excluir_usuario(Usuario u) {
+    public void excluirUsuario(Usuario u) {
         //Demais operações
 
-        Banco.excluir_usuario(u);
+        Banco.excluirUsuario(u);
     }
 
     public boolean login(String email, String senha) {

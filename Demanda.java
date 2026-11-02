@@ -2,6 +2,10 @@ import java.time.LocalDateTime;
 
 
 public class Demanda {
+
+    public static int ID = 0;
+
+    private final int id;
     private String titulo;
     @SuppressWarnings("unused")
     private String descricao;
@@ -17,6 +21,8 @@ public class Demanda {
     private LocalDateTime prazo;
 
     public Demanda(String titulo, String descricao, String situacao, String prioridade, LocalDateTime data_criacao, LocalDateTime encerramento, LocalDateTime prazo) {
+        this.id = ID;
+        ID++;
         this.titulo = titulo;
         this.descricao = descricao;
         this.situacao = situacao;
