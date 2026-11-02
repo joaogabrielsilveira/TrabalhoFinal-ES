@@ -58,14 +58,14 @@ public class Banco {
 
     public static void excluirDemanda(Demanda d) {
         List<Demanda> lista = recuperarDemandas();
-        lista.removeIf(demanda -> demanda.get_titulo().equals(d.get_titulo()));
+        lista.removeIf(demanda -> demanda.getTitulo().equals(d.getTitulo()));
         gravar("database/demandas.json", gson.toJson(lista));
     }
 
     public static void editarDemanda(Demanda dAtualizada) {
         List<Demanda> lista = recuperarDemandas();
         for (int i = 0; i < lista.size(); i++) {
-            if (lista.get(i).get_titulo().equals(dAtualizada.get_titulo())) {
+            if (lista.get(i).getTitulo().equals(dAtualizada.getTitulo())) {
                 lista.set(i, dAtualizada);
                 break;
             }

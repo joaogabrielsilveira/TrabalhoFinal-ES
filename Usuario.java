@@ -1,3 +1,7 @@
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class Usuario {
 
     private static int ID = 0;
@@ -22,15 +26,36 @@ public class Usuario {
         return this.matricula == outro.matricula;
     }
 
-    public void enviarMensagem(String conteudo, Usuario destinatario) {
+    public void enviarMensagem(String titulo, String conteudo, Usuario destinatario) {
 
-        Mensagem novaMensagem = new Mensagem(conteudo, this, destinatario);
+        Mensagem novaMensagem = new Mensagem(titulo, conteudo, this, destinatario);
+
+        Banco.armazenarMensagem(novaMensagem);
         this.mensagensEnviadas.add(novaMensagem);
         destinatario.mensagensRecebidas.add(novaMensagem);
-
     }
 
-     public String getEmail() {
+    public List<Integer> getMensagensRecebidas() {
+        List<Integer> idsMensagensLidas = new ArrayList<>();
+
+        for (Mensagem mensagem : mensagensRecebidas) {
+            idsMensagensLidas.add(mensagem.getId());
+        }
+        
+        return idsMensagensLidas;
+    }
+
+    public List<Integer> getMensagensEnviadas() {
+        List<Integer> idsMensagensEnviadas = new ArrayList<>();
+
+        for (Mensagem mensagem : mensagensEnviadas) {
+            idsMensagensEnviadas.add(mensagem.getId());
+        }
+        
+        return idsMensagensEnviadas;   
+    }
+
+    public String getEmail() {
         return this.email;
     }
 
@@ -47,7 +72,7 @@ public class Usuario {
     }
 
     public TipoUsuario getTipo() {
-        return this.tipo;
+        return this.type;
     }
 
     public void delete() {

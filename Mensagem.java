@@ -5,6 +5,7 @@ public class Mensagem {
     @SuppressWarnings("unused")
     public static int ID = 0;
 
+    private String titulo;
     private String conteudo;
     @SuppressWarnings("unused")
     private Usuario remetente;
@@ -12,8 +13,10 @@ public class Mensagem {
     private Usuario destinatario;
     private boolean lida;
 
-    public Mensagem(int id, String conteudo, Usuario remetente, Usuario destinatario) {
-        this.id = id;
+    public Mensagem(String titulo, String conteudo, Usuario remetente, Usuario destinatario) {
+        this.titulo = titulo;
+        this.id = ID;
+        ID++;
         this.conteudo = conteudo;
         this.remetente = remetente;
         this.destinatario = destinatario;
@@ -23,12 +26,12 @@ public class Mensagem {
         return lida;
     }
 
-    public void setLida(boolean lida) {
-        this.lida = lida;
+    public void setLida() {
+        this.lida = true;
     }
 
     public String getConteudo() {
-        setLida(true);
+        setLida();
         return conteudo;
     }
 

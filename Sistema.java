@@ -4,10 +4,15 @@ import java.util.InputMismatchException;
 import java.util.Scanner;
 
 
+
 public class Sistema {
 
     Usuario user = null;
+    public static Scanner sc = new Scanner(System.in);
     private List<Usuario> u;
+    private static List<Desenvolvedor> d;
+    private static List<Cliente> c;
+    private static List<Avaliador> a;
     public Sistema() {
         
     }
@@ -106,5 +111,17 @@ public class Sistema {
             }
         }
         sc.close();
+    }
+
+    public static List<Desenvolvedor> getDesenvolvedores() {
+        return d;
+    }
+
+    public static List<Cliente> getClientes() {
+        return c;
+    }
+
+    public static List<Avaliador> getAvaliadores() {
+        return a;
     }
 }
