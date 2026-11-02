@@ -1,16 +1,16 @@
-public class Mensagem {
+import java.time.LocalDateTime;
 
-    @SuppressWarnings("unused")
+public class Mensagem {
     private final int id;
-    @SuppressWarnings("unused")
     public static int ID = 0;
 
     private String titulo;
     private String conteudo;
-    @SuppressWarnings("unused")
-    private Usuario remetente;
-    @SuppressWarnings("unused")
-    private Usuario destinatario;
+    private String nomeRemetente;
+    private String emailRemetente;
+    private String nomeDestinatario;
+    private String emailDestinatario;
+    private LocalDateTime horarioEnvio;
     private boolean lida;
 
     public Mensagem(String titulo, String conteudo, Usuario remetente, Usuario destinatario) {
@@ -18,8 +18,11 @@ public class Mensagem {
         this.id = ID;
         ID++;
         this.conteudo = conteudo;
-        this.remetente = remetente;
-        this.destinatario = destinatario;
+        this.nomeRemetente = remetente.getNome();
+        this.emailRemetente = remetente.getEmail();
+        this.nomeDestinatario = destinatario.getNome();
+        this.emailDestinatario = destinatario.getNome();
+        this.horarioEnvio = LocalDateTime.now();
     }
 
     public boolean isLida() {
@@ -35,15 +38,31 @@ public class Mensagem {
         return conteudo;
     }
 
-    public Usuario getRemetente() {
-        return remetente;
+    public String getTitulo() {
+        return this.titulo;
     }
 
-    public Usuario getDestinatario() {
-        return destinatario;
+    public String getNomeRemetente() {
+        return this.nomeRemetente;
+    }
+
+    public String getEmailRemetente() {
+        return this.emailRemetente;
+    }
+
+    public String getNomeDestinatario() {
+        return this.nomeDestinatario;
+    }
+
+    public String getEmailDestinatario() {
+        return this.emailDestinatario;
     }
 
     public int getId() {
         return id;
+    }
+
+    public LocalDateTime getData() {
+        return this.horarioEnvio;
     }
 }

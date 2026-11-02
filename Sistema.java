@@ -1,5 +1,6 @@
 import java.util.List;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 
@@ -14,7 +15,7 @@ public class Sistema {
     private static List<Cliente> c;
     private static List<Avaliador> a;
     public Sistema() {
-        u = Banco.recuperar_usuarios();
+        u = Banco.recuperarUsuarios();
     }
 
     public void registrarUsuario(Usuario u) {
@@ -94,6 +95,82 @@ public class Sistema {
         return sucesso;
     }
 
+    public String getMessageString(Mensagem msg, boolean conteudo) {
+        String txt = String.format("Data:%s\nRemtente: %s [%s]\nDestinatario: %s [%s]\nAssunto:%s\n", msg.getData(), msg.getNomeRemetente(), msg.getEmailRemetente(), msg.getNomeDestinatario(), msg.getEmailDestinatario(), msg.getTitulo());
+        if (conteudo) {
+            txt += String.format("Conteúdo:%s\n", msg.getConteudo());
+        }
+        return txt;
+    }
+
+    public void loopMensagensLista(int escolha, int listLength) {
+        boolean ativo = true;
+        int page = 0;
+        while (ativo) {
+            Mensagem[] mensagens = new Mensagem[]{};
+            if (escolha == 1) {
+                mensagens = user.getMensagensRecebidas().toArray(new Mensagem[0]);
+            }
+            else if (escolha == 2) {
+                mensagens = user.getMensagensEnviadas().toArray(new Mensagem[0]);
+            }
+            int numMensagens = mensagens.length;
+            int start = page * listLength;
+            int end = Math.min(start+listLength, numMensagens);
+            
+            List<String> opcoesMsg = new ArrayList<>();
+            for (int i = start; i < end; i++) {
+                opcoesMsg.add(getMessageString(mensagens[i], false));
+            }
+            
+            boolean hasNextPage, hasPreviousPage;
+            hasNextPage = end < numMensagens;
+            hasPreviousPage = page > 0;
+            
+            if (hasNextPage) {
+                opcoesMsg.add("Próxima página");
+            }
+            if (hasPreviousPage) {
+                opcoesMsg.add("Página Anterior");
+            }
+            opcoesMsg.add("Voltar");
+            
+
+            int escolhaMsg = lerEscolha(opcoesMsg.toArray(new String[0]));
+            if (escolhaMsg == opcoesMsg.size() || escolhaMsg == -1) {
+                ativo = false;
+            }
+            else if (escolhaMsg != -1){
+                if (escolhaMsg <= (end - start)) {
+                    System.out.println(getMessageString(mensagens[start + escolhaMsg-1], true));
+                    System.out.println("Pressione enter para voltar ao menu.");
+                    sc.nextLine();
+                }
+                else if (escolhaMsg == listLength+1) {
+                    if (hasPreviousPage) page--;
+                    else page++;
+                }
+                else if (escolhaMsg == listLength+2) {
+                    page--;
+                }
+            }
+        }
+    }
+
+    public void loopMensagens() {
+        int listLength = 5;
+        boolean ativo = true;
+        while(ativo) {
+            int escolha = lerEscolha(new String[]{"Ver caixa de entrada", "Ver caixa de saída", "Sair"});
+            if (escolha == 1 || escolha == 2) {
+                loopMensagensLista(escolha, listLength);
+            }
+            else if (escolha == 3) {
+                ativo = false;
+            }
+        }
+    }
+
     public void loopUsuario() {
         boolean ativo = true;
         String[] opcoes = new String[]{};
@@ -118,16 +195,20 @@ public class Sistema {
                 user = null;
                 ativo = false;
             }
-            switch (user.getTipo()) {
-                case Avaliador:
-                    break;
-                case Cliente:
-                    break;
-                case Desenvolvedor:
-                    break;
-                default:
-                    break;
-
+            if (user != null) {
+                switch (user.getTipo()) {
+                    case Avaliador:
+                        break;
+                    case Cliente:
+                        if (escolha == 3) {
+                            loopMensagens();
+                        }
+                        break;
+                    case Desenvolvedor:
+                        break;
+                    default:
+                        break;
+                }   
             }   
         }
     }

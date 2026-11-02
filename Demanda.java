@@ -11,17 +11,13 @@ public class Demanda {
     private Usuario solicitante;
     private List<Tarefa> tarefas;
     private String titulo;
-    @SuppressWarnings("unused")
     private String descricao;
-    @SuppressWarnings("unused")
     private StatusDemanda situacao;
-    @SuppressWarnings("unused")
     private PrioridadeDemanda prioridade;
     @SuppressWarnings("unused")
     private LocalDateTime data_criacao;
     @SuppressWarnings("unused")
     private LocalDateTime encerramento;
-    @SuppressWarnings("unused")
     private LocalDateTime prazo;
 
     public Demanda(Usuario solicitante, String titulo, String descricao, LocalDateTime prazo) {

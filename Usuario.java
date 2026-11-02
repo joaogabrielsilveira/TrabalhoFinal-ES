@@ -21,7 +21,7 @@ public class Usuario {
         this.nome = nome;
         this.email = email;
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        this.senha = encoder.encode(senha);;
+        this.senha = encoder.encode(senha);
         this.type = tipo;
     }
 
