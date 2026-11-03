@@ -1,36 +1,55 @@
 import java.util.List;
 import java.util.Optional;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
-
 
 
 public class Sistema {
 
     Usuario user = null;
     public static Scanner sc = new Scanner(System.in);
-    private List<Usuario> u;
+    public static DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static List<Usuario> users;
     private static List<Desenvolvedor> d;
     private static List<Cliente> c;
     private static List<Avaliador> a;
     public Sistema() {
-        u = Banco.recuperarUsuarios();
+        Sistema.users = Banco.recuperarUsuarios();
+    }
+
+    public Usuario getUsuario(String email) {
+        Optional<Usuario> query = 
+        Sistema.users.stream()
+        .filter(usuario -> usuario.getEmail().equals(email))
+        .findFirst();
+
+        if (!query.isPresent()) {
+            return null;
+        }
+
+        return query.get();
     }
 
     public void registrarUsuario(Usuario u) {
 
         Banco.salvarUsuario(u);
-        this.u = Banco.recuperarUsuarios();
+        Sistema.users = Banco.recuperarUsuarios();
     }
 
     public void excluirUsuario(Usuario u) {
         //Demais operações
 
         Banco.excluirUsuario(u);
-        this.u = Banco.recuperarUsuarios();
+        Sistema.users = Banco.recuperarUsuarios();
+    }
+
+    public static void atualizarUsuario(Usuario u) {
+        Banco.excluirUsuario(u);
+        Banco.salvarUsuario(u);
+        Sistema.users = Banco.recuperarUsuarios();
     }
 
     public boolean login(String email, String senha) {
@@ -38,13 +57,9 @@ public class Sistema {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         boolean ok = false;
 
-        if(u.stream().anyMatch(usuario -> usuario.getEmail().equals(email))) {
+        if(getUsuario(email) != null) {
             
-            String hash = u.stream()
-                .filter(usuario -> usuario.getEmail().equals(email))
-                .findFirst()
-                .get()
-                .getSenha();
+            String hash = getUsuario(email).getSenha();
             
             ok = encoder.matches(senha, hash);
         }
@@ -83,11 +98,8 @@ public class Sistema {
         String nome = sc.nextLine();
         System.out.print("Digite o email de usuário: ");
         String email = sc.nextLine();
-        Optional<Usuario> ex = 
-        u.stream()
-        .filter(usuario -> usuario.getEmail().equals(email))
-        .findFirst();
-        if (ex.isPresent()) {
+        Usuario existente = getUsuario(email);
+        if (existente != null) {
             System.out.println("Usuário com esse email já existe. Não foi possível registrar.");
             return false;
         }
@@ -126,10 +138,7 @@ public class Sistema {
             System.out.println("Usuário ou senha incorretos, tente novamente");
         }
         else {
-            Usuario logged = u.stream()
-                .filter(usuario -> usuario.getEmail().equals(email))
-                .findFirst()
-                .get();
+            Usuario logged = getUsuario(email);
             user = logged;
             System.out.println(String.format("Login do usuário %s realizado com sucesso.", user.getNome()));
         }
@@ -137,10 +146,19 @@ public class Sistema {
         return sucesso;
     }
 
-    public String getMessageString(Mensagem msg, boolean conteudo) {
-        String txt = String.format("Data:%s\nRemtente: %s [%s]\nDestinatario: %s [%s]\nAssunto:%s\n", msg.getData(), msg.getNomeRemetente(), msg.getEmailRemetente(), msg.getNomeDestinatario(), msg.getEmailDestinatario(), msg.getTitulo());
+    public String getMessageString(Mensagem msg, boolean conteudo, boolean recebida) {
+        String txt = "";
+        if (recebida) {
+            if (msg.isLida()) {
+                txt = "(Lida)\n";
+            }
+            else {
+                txt = "(Não Lida)\n";
+            }
+        }
+        txt += String.format("Data: %s\nRemtente: %s [%s]\nDestinatário: %s [%s]\nAssunto: %s\n", msg.getData().format(dateFormatter), msg.getNomeRemetente(), msg.getEmailRemetente(), msg.getNomeDestinatario(), msg.getEmailDestinatario(), msg.getTitulo());
         if (conteudo) {
-            txt += String.format("Conteúdo:%s\n", msg.getConteudo());
+            txt += String.format("Conteúdo:\n%s", msg.getConteudo());
         }
         return txt;
     }
@@ -159,10 +177,12 @@ public class Sistema {
             int numMensagens = mensagens.length;
             int start = page * listLength;
             int end = Math.min(start+listLength, numMensagens);
+
+            boolean recebida = (escolha == 1);
             
             List<String> opcoesMsg = new ArrayList<>();
             for (int i = start; i < end; i++) {
-                opcoesMsg.add(getMessageString(mensagens[i], false));
+                opcoesMsg.add(getMessageString(mensagens[i], false, recebida));
             }
             
             boolean hasNextPage, hasPreviousPage;
@@ -185,31 +205,34 @@ public class Sistema {
             else if (escolhaMsg != -1) {
                 if (escolhaMsg <= (end - start)) {
                     Mensagem m = mensagens[start + escolhaMsg-1];
-                    System.out.println(getMessageString(m, true));
+                    System.out.println(getMessageString(m, true, false));
                     if (escolha == 1) {
                         int escolhaResposta = lerEscolha(new String[]{"Responder", "Voltar"});
                         if (escolhaResposta == 1) {
-                            Usuario destUser = 
-                            u.stream()
-                            .filter(usuario -> usuario.getEmail().equals(m.getEmailRemetente()))
-                            .findFirst()
-                            .get();
-                            System.out.println("Digite o conteúdo da resposta:\n");
-                            String conteudo = sc.nextLine();
-                            user.enviarMensagem("Re: " + m.getTitulo(), conteudo, destUser);
+                            Usuario destUser = getUsuario(m.getEmailRemetente());
+                            if (destUser == null) {
+                                System.out.println("Remetente não existe mais na base de dados.");
+                            }
+                            else {
+                                System.out.println("Digite o conteúdo da resposta: ");
+                                String conteudo = sc.nextLine();
+                                user.enviarMensagem("Re: " + m.getTitulo(), conteudo, destUser);
+                            }   
                         }
                     }
                     else {
-                        System.out.println("Visualizando a mensagem. Digite enter para voltar.");
+                        System.out.println("[Visualizando a mensagem. Digite enter para voltar]");
                         sc.nextLine();
                     }
                 }
-                else if (escolhaMsg == listLength+1) {
-                    if (hasPreviousPage) page--;
-                    else page++;
-                }
-                else if (escolhaMsg == listLength+2) {
-                    page--;
+                else {
+                    String[] opcoesArray = opcoesMsg.toArray(new String[0]);
+                    if (opcoesArray[escolhaMsg-1].contains("Próxima")) {
+                        page++;
+                    }
+                    else if (opcoesArray[escolhaMsg-1].contains("Anterior")){
+                        page--;
+                    }
                 }
             }
         }
@@ -218,11 +241,8 @@ public class Sistema {
     public boolean loopMensagensEscrever() {
         System.out.print("Digite o email do destinatário: ");
         String emailDest = sc.nextLine();
-        Optional<Usuario> dest = 
-        u.stream()
-        .filter(usuario -> usuario.getEmail().equals(emailDest))
-        .findFirst();
-        if (!dest.isPresent()) {
+        Usuario dest = getUsuario(emailDest);
+        if (dest == null) {
             System.out.println("Email não encontrado.");
             return false;
         }
@@ -230,7 +250,7 @@ public class Sistema {
         String titulo = sc.nextLine();
         System.out.println("Digite o conteúdo da mensagem: ");
         String conteudo = sc.nextLine();
-        user.enviarMensagem(titulo, conteudo, dest.get());
+        user.enviarMensagem(titulo, conteudo, dest);
         return true;
     }
 

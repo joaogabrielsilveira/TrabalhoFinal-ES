@@ -21,7 +21,7 @@ public class Mensagem {
         this.nomeRemetente = remetente.getNome();
         this.emailRemetente = remetente.getEmail();
         this.nomeDestinatario = destinatario.getNome();
-        this.emailDestinatario = destinatario.getNome();
+        this.emailDestinatario = destinatario.getEmail();
         this.horarioEnvio = LocalDateTime.now();
     }
 

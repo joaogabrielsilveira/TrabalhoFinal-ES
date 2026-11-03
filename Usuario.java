@@ -36,6 +36,8 @@ public class Usuario {
         Banco.armazenarMensagem(novaMensagem);
         this.mensagensEnviadas.add(novaMensagem);
         destinatario.mensagensRecebidas.add(novaMensagem);
+        Sistema.atualizarUsuario(this);
+        Sistema.atualizarUsuario(destinatario);
     }
 
     public List<Mensagem> getMensagensRecebidas() {
