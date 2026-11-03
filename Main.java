@@ -14,7 +14,7 @@ public class Main {
             "Lucas",
             "lucas@gmail.com",
             "lucas123",
-            TipoUsuario.Desenvolvedor
+            TipoUsuario.Cliente
         );
         
         for (int i = 0; i < 10; i++) {

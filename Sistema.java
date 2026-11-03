@@ -1,4 +1,6 @@
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.util.ArrayList;
 import java.util.InputMismatchException;
@@ -21,12 +23,14 @@ public class Sistema {
     public void registrarUsuario(Usuario u) {
 
         Banco.salvarUsuario(u);
+        this.u = Banco.recuperarUsuarios();
     }
 
     public void excluirUsuario(Usuario u) {
         //Demais operações
 
         Banco.excluirUsuario(u);
+        this.u = Banco.recuperarUsuarios();
     }
 
     public boolean login(String email, String senha) {
@@ -74,8 +78,46 @@ public class Sistema {
         return valid ? escolha : -1;
     }
 
-    public boolean loopLogin() {
+    public boolean loopRegistro() {
         System.out.print("Digite o nome de usuário: ");
+        String nome = sc.nextLine();
+        System.out.print("Digite o email de usuário: ");
+        String email = sc.nextLine();
+        Optional<Usuario> ex = 
+        u.stream()
+        .filter(usuario -> usuario.getEmail().equals(email))
+        .findFirst();
+        if (ex.isPresent()) {
+            System.out.println("Usuário com esse email já existe. Não foi possível registrar.");
+            return false;
+        }
+
+        System.out.print("Digite a senha: ");
+        String senha = sc.nextLine();
+
+        System.out.println("Escolha o tipo de conta: ");
+        int escolhaTipo = -1;
+        while ((escolhaTipo = lerEscolha(new String[]{"Cliente", "Avaliador", "Desenvolvedor"})) < 0);
+        TipoUsuario tipo = TipoUsuario.Cliente;
+        switch (escolhaTipo) {
+            case 1:
+                tipo = TipoUsuario.Cliente;
+            case 2:
+                tipo = TipoUsuario.Avaliador;
+            case 3:
+                tipo = TipoUsuario.Desenvolvedor;
+            default:
+                break;
+        }
+
+        Usuario novo = new Usuario(0, nome, email, senha, tipo);
+        registrarUsuario(novo);
+        System.out.println(String.format("Conta registrada com sucesso para o usuário %s", nome));
+        return true;
+    }
+
+    public boolean loopLogin() {
+        System.out.print("Digite o email de usuário: ");
         String email = sc.nextLine();
         System.out.print("Digite a senha: ");
         String senha = sc.nextLine();
@@ -140,11 +182,27 @@ public class Sistema {
             if (escolhaMsg == opcoesMsg.size() || escolhaMsg == -1) {
                 ativo = false;
             }
-            else if (escolhaMsg != -1){
+            else if (escolhaMsg != -1) {
                 if (escolhaMsg <= (end - start)) {
-                    System.out.println(getMessageString(mensagens[start + escolhaMsg-1], true));
-                    System.out.println("Pressione enter para voltar ao menu.");
-                    sc.nextLine();
+                    Mensagem m = mensagens[start + escolhaMsg-1];
+                    System.out.println(getMessageString(m, true));
+                    if (escolha == 1) {
+                        int escolhaResposta = lerEscolha(new String[]{"Responder", "Voltar"});
+                        if (escolhaResposta == 1) {
+                            Usuario destUser = 
+                            u.stream()
+                            .filter(usuario -> usuario.getEmail().equals(m.getEmailRemetente()))
+                            .findFirst()
+                            .get();
+                            System.out.println("Digite o conteúdo da resposta:\n");
+                            String conteudo = sc.nextLine();
+                            user.enviarMensagem("Re: " + m.getTitulo(), conteudo, destUser);
+                        }
+                    }
+                    else {
+                        System.out.println("Visualizando a mensagem. Digite enter para voltar.");
+                        sc.nextLine();
+                    }
                 }
                 else if (escolhaMsg == listLength+1) {
                     if (hasPreviousPage) page--;
@@ -157,15 +215,37 @@ public class Sistema {
         }
     }
 
+    public boolean loopMensagensEscrever() {
+        System.out.print("Digite o email do destinatário: ");
+        String emailDest = sc.nextLine();
+        Optional<Usuario> dest = 
+        u.stream()
+        .filter(usuario -> usuario.getEmail().equals(emailDest))
+        .findFirst();
+        if (!dest.isPresent()) {
+            System.out.println("Email não encontrado.");
+            return false;
+        }
+        System.out.print("Digite o título da mensagem: ");
+        String titulo = sc.nextLine();
+        System.out.println("Digite o conteúdo da mensagem: ");
+        String conteudo = sc.nextLine();
+        user.enviarMensagem(titulo, conteudo, dest.get());
+        return true;
+    }
+
     public void loopMensagens() {
         int listLength = 5;
         boolean ativo = true;
         while(ativo) {
-            int escolha = lerEscolha(new String[]{"Ver caixa de entrada", "Ver caixa de saída", "Sair"});
+            int escolha = lerEscolha(new String[]{"Ver caixa de entrada", "Ver caixa de saída", "Escrever mensagem", "Sair"});
             if (escolha == 1 || escolha == 2) {
                 loopMensagensLista(escolha, listLength);
             }
             else if (escolha == 3) {
+                loopMensagensEscrever();
+            }
+            else if (escolha == 4) {
                 ativo = false;
             }
         }
@@ -176,13 +256,13 @@ public class Sistema {
         String[] opcoes = new String[]{};
         switch (user.getTipo()) {
             case Avaliador:
-                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Ver mensagens", "Logout"};
+                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Gerenciar mensagens", "Logout"};
                 break;
             case Cliente:
-                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Ver mensagens", "Logout"};
+                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Gerenciar mensagens", "Logout"};
                 break;
             case Desenvolvedor:
-                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Ver mensagens", "Logout"};
+                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Gerenciar mensagens", "Logout"};
                 break;
             default:
                 break;
@@ -198,6 +278,9 @@ public class Sistema {
             if (user != null) {
                 switch (user.getTipo()) {
                     case Avaliador:
+                        if (escolha == 3) {
+                            loopMensagens();
+                        }
                         break;
                     case Cliente:
                         if (escolha == 3) {
@@ -205,6 +288,9 @@ public class Sistema {
                         }
                         break;
                     case Desenvolvedor:
+                        if (escolha == 3) {
+                            loopMensagens();
+                        }
                         break;
                     default:
                         break;
@@ -217,7 +303,7 @@ public class Sistema {
         boolean ativo = true;
         int escolha;
         while (ativo) {
-            escolha = lerEscolha(new String[] {"Login", "Sair"});
+            escolha = lerEscolha(new String[] {"Login", "Criar conta", "Sair"});
             switch (escolha) {
                 case 1:
                     if (loopLogin()) {
@@ -228,6 +314,9 @@ public class Sistema {
                     }
                     break;
                 case 2:
+                    loopRegistro();
+                    break;
+                case 3:
                     ativo = false;
                     break;
                 default:
