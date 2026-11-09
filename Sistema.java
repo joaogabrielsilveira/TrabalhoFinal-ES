@@ -5,7 +5,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
-
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 public class Sistema {
 
@@ -16,11 +18,18 @@ public class Sistema {
     private static List<Desenvolvedor> d;
     private static List<Cliente> c;
     private static List<Avaliador> a;
+
     public Sistema() {
         Sistema.users = Banco.recuperarUsuarios();
+        Sistema.d = new ArrayList<>();
+        Sistema.c = new ArrayList<>();
+        Sistema.a = new ArrayList<>();
     }
 
     public static Usuario getUsuario(String email) {
+        if (users == null) {
+            return null;
+        }
         Optional<Usuario> query = 
         Sistema.users.stream()
         .filter(usuario -> usuario.getEmail().equals(email))
@@ -34,8 +43,20 @@ public class Sistema {
     }
 
     public void registrarUsuario(Usuario u) {
-
         Banco.salvarUsuario(u);
+        switch (u.getTipo()) {
+            case Cliente:
+                c.add((Cliente)u);
+                break;
+            case Avaliador:
+                a.add((Avaliador)u);
+                break;
+            case Desenvolvedor:
+                d.add((Desenvolvedor)u);
+                break;
+            default:
+                break;
+        }
         Sistema.users = Banco.recuperarUsuarios();
     }
 
@@ -48,6 +69,7 @@ public class Sistema {
 
     public static void atualizarUsuario(Usuario u) {
         Banco.excluirUsuario(u);
+        
         Banco.salvarUsuario(u);
         Sistema.users = Banco.recuperarUsuarios();
     }
@@ -111,18 +133,22 @@ public class Sistema {
         int escolhaTipo = -1;
         while ((escolhaTipo = lerEscolha(new String[]{"Cliente", "Avaliador", "Desenvolvedor"})) < 0);
         TipoUsuario tipo = TipoUsuario.Cliente;
+
+        Usuario novo = new Usuario(0, nome, email, senha, tipo);
         switch (escolhaTipo) {
             case 1:
                 tipo = TipoUsuario.Cliente;
+                novo = new Cliente(0, nome, email, senha, tipo);
             case 2:
                 tipo = TipoUsuario.Avaliador;
+                novo = new Desenvolvedor(0, nome, email, senha, tipo);
             case 3:
                 tipo = TipoUsuario.Desenvolvedor;
+                novo = new Avaliador(0, nome, email, senha, tipo);
             default:
                 break;
         }
 
-        Usuario novo = new Usuario(0, nome, email, senha, tipo);
         registrarUsuario(novo);
         System.out.println(String.format("Conta registrada com sucesso para o usuário %s", nome));
         return true;
@@ -138,22 +164,7 @@ public class Sistema {
             System.out.println("Usuário ou senha incorretos, tente novamente");
         }
         else {
-            Usuario logged = getUsuario(email);
-            switch (logged.getTipo()) {
-                case TipoUsuario.Cliente:
-                    logged = new Cliente(logged.getMatricula(), senha, email, senha, TipoUsuario.Cliente);
-                    break;
-                case TipoUsuario.Avaliador:
-                    logged = new Avaliador(logged.getMatricula(), senha, email, senha, TipoUsuario.Avaliador);
-                    break;
-                case TipoUsuario.Desenvolvedor:
-                    logged = new Desenvolvedor(logged.getMatricula(), senha, email, senha, TipoUsuario.Desenvolvedor);
-                    break;
-                default:
-                    System.out.println("Tipo de usuário inválido");
-                    break;
-            }
-            user = logged;
+            user = getUsuario(email);
             System.out.println(String.format("Login do usuário %s realizado com sucesso.", user.getNome()));
         }
 
@@ -177,79 +188,87 @@ public class Sistema {
         return txt;
     }
 
-    public void loopMensagensLista(int escolha, int listLength) {
+    public <T> void loopPaginacaoLista(Supplier<T[]> fornecedorItens, int listLength, Function<T, String> conversorString, Consumer<T> acaoAoVisualizar) {
         boolean ativo = true;
         int page = 0;
         while (ativo) {
-            Mensagem[] mensagens = new Mensagem[]{};
-            if (escolha == 1) {
-                mensagens = user.getMensagensRecebidas().toArray(new Mensagem[0]);
-            }
-            else if (escolha == 2) {
-                mensagens = user.getMensagensEnviadas().toArray(new Mensagem[0]);
-            }
-            int numMensagens = mensagens.length;
+            // Agora a lista é recarregada a cada iteração do menu!
+            T[] itens = fornecedorItens.get(); 
+            
+            int numItens = itens.length;
             int start = page * listLength;
-            int end = Math.min(start+listLength, numMensagens);
-
-            boolean recebida = (escolha == 1);
+            int end = Math.min(start + listLength, numItens);
             
-            List<String> opcoesMsg = new ArrayList<>();
+            List<String> opcoes = new ArrayList<>();
             for (int i = start; i < end; i++) {
-                opcoesMsg.add(getMessageString(mensagens[i], false, recebida));
+                opcoes.add(conversorString.apply(itens[i]));
             }
             
-            boolean hasNextPage, hasPreviousPage;
-            hasNextPage = end < numMensagens;
-            hasPreviousPage = page > 0;
+            boolean hasNextPage = end < numItens;
+            boolean hasPreviousPage = page > 0;
             
-            if (hasNextPage) {
-                opcoesMsg.add("Próxima página");
-            }
-            if (hasPreviousPage) {
-                opcoesMsg.add("Página Anterior");
-            }
-            opcoesMsg.add("Voltar");
+            if (hasNextPage) opcoes.add("Próxima página");
+            if (hasPreviousPage) opcoes.add("Página Anterior");
+            opcoes.add("Voltar");
             
-
-            int escolhaMsg = lerEscolha(opcoesMsg.toArray(new String[0]));
-            if (escolhaMsg == opcoesMsg.size() || escolhaMsg == -1) {
+            int escolhaMsg = lerEscolha(opcoes.toArray(new String[0]));
+            if (escolhaMsg == opcoes.size() || escolhaMsg == -1) {
                 ativo = false;
-            }
-            else if (escolhaMsg != -1) {
+            } else if (escolhaMsg != -1) {
                 if (escolhaMsg <= (end - start)) {
-                    Mensagem m = mensagens[start + escolhaMsg-1];
-                    System.out.println(getMessageString(m, true, false));
-                    if (escolha == 1) {
-                        int escolhaResposta = lerEscolha(new String[]{"Responder", "Voltar"});
-                        if (escolhaResposta == 1) {
-                            Usuario destUser = getUsuario(m.getEmailRemetente());
-                            if (destUser == null) {
-                                System.out.println("Remetente não existe mais na base de dados.");
-                            }
-                            else {
-                                System.out.println("Digite o conteúdo da resposta: ");
-                                String conteudo = sc.nextLine();
-                                user.enviarMensagem("Re: " + m.getTitulo(), conteudo, destUser);
-                            }   
-                        }
-                    }
-                    else {
-                        System.out.println("[Visualizando a mensagem. Digite enter para voltar]");
-                        sc.nextLine();
-                    }
-                }
-                else {
-                    String[] opcoesArray = opcoesMsg.toArray(new String[0]);
-                    if (opcoesArray[escolhaMsg-1].contains("Próxima")) {
+                    T itemSelecionado = itens[start + escolhaMsg - 1];
+                    acaoAoVisualizar.accept(itemSelecionado);
+                } else {
+                    String opcaoArray = opcoes.get(escolhaMsg - 1);
+                    if (opcaoArray.equals("Próxima página")) {
                         page++;
-                    }
-                    else if (opcoesArray[escolhaMsg-1].contains("Anterior")){
+                    } else if (opcaoArray.equals("Página Anterior")) {
                         page--;
                     }
                 }
             }
         }
+    }
+
+    public void loopMensagensLista(int escolha, int listLength) {
+        boolean recebida = (escolha == 1);
+        
+        loopPaginacaoLista(
+            // 1. Supplier para buscar a caixa de entrada ou saída atualizada
+            () -> {
+                if (escolha == 1) {
+                    return user.getMensagensRecebidas().toArray(new Mensagem[0]);
+                } else {
+                    return user.getMensagensEnviadas().toArray(new Mensagem[0]);
+                }
+            },
+            
+            listLength, 
+            
+            // 2. Function
+            m -> getMessageString(m, false, recebida), 
+            
+            // 3. Consumer
+            m -> {
+                System.out.println(getMessageString(m, true, false));
+                if (escolha == 1) {
+                    int escolhaResposta = lerEscolha(new String[]{"Responder", "Voltar"});
+                    if (escolhaResposta == 1) {
+                        Usuario destUser = getUsuario(m.getEmailRemetente());
+                        if (destUser == null) {
+                            System.out.println("Remetente não existe mais na base de dados.");
+                        } else {
+                            System.out.println("Digite o conteúdo da resposta: ");
+                            String conteudo = Sistema.sc.nextLine(); // Certifique-se de usar Sistema.sc
+                            user.enviarMensagem("Re: " + m.getTitulo(), conteudo, destUser);
+                        }   
+                    }
+                } else {
+                    System.out.println("[Visualizando a mensagem. Digite enter para voltar]");
+                    Sistema.sc.nextLine();
+                }
+            }
+        );
     }
 
     public boolean loopMensagensEscrever() {
@@ -305,83 +324,147 @@ public class Sistema {
         return txt;
     }
 
-    public void loopDemandasLista() {
-        boolean ativo = true;
-        int page = 0;
+    public void loopDemandasCliente() {
         int listLength = 5;
-        while (ativo) {
-            Demanda[] demandas = ((Cliente)user).getDemandasSolicitadas().toArray(new Demanda[0]);
+        
+        loopPaginacaoLista(
+            // 1. Supplier: ensina como pegar as demandas sempre atualizadas
+            () -> ((Cliente)user).getDemandasSolicitadas().toArray(new Demanda[0]), 
             
-            int numMensagens = demandas.length;
-            int start = page * listLength;
-            int end = Math.min(start+listLength, numMensagens);
+            listLength, 
             
-            List<String> opcoesDemanda = new ArrayList<>();
-            for (int i = start; i < end; i++) {
-                opcoesDemanda.add(getDemandaString(demandas[i], false));
+            // 2. Function: como exibir a string na lista
+            d -> getDemandaString(d, false), 
+            
+            // 3. Consumer: o que fazer ao clicar
+            d -> {
+                System.out.println(getDemandaString(d, true));
+                int escolhaEdicao = lerEscolha(new String[]{"Editar", "Voltar"});
+                if (escolhaEdicao == 1) {
+                    System.out.println("Digite o novo conteúdo da demanda: ");
+                    String novoConteudo = Sistema.sc.nextLine();
+                    System.out.println("Digite o novo prazo da demanda (em dias): ");
+                    int novoPrazo = Sistema.sc.nextInt();
+                    if (novoPrazo < 0 || novoPrazo < d.getPrazo()) {
+                        System.out.println("Prazo inválido, deve ser maior que o atual.");
+                    } else {
+                        ((Cliente)user).atualizarDemanda(d, novoConteudo, novoPrazo);
+                        System.out.println("Demanda atualizada com sucesso.");
+                    }
+                }
             }
-            
-            boolean hasNextPage, hasPreviousPage;
-            hasNextPage = end < numMensagens;
-            hasPreviousPage = page > 0;
-            
-            if (hasNextPage) {
-                opcoesDemanda.add("Próxima página");
-            }
-            if (hasPreviousPage) {
-                opcoesDemanda.add("Página Anterior");
-            }
-            opcoesDemanda.add("Voltar");
-            
+        );
+    }
 
-            int escolhaMsg = lerEscolha(opcoesDemanda.toArray(new String[0]));
-            if (escolhaMsg == opcoesDemanda.size() || escolhaMsg == -1) {
-                ativo = false;
-            }
-            else if (escolhaMsg != -1) {
-                if (escolhaMsg <= (end - start)) {
-                    Demanda d = demandas[start + escolhaMsg-1];
-                    System.out.println(getDemandaString(d, true));
-                    int escolhaEdicao = lerEscolha(new String[]{"Editar", "Voltar"});
-                    if (escolhaEdicao == 1) {
-                        System.out.println("Digite o novo conteúdo da demanda: ");
-                        String novoConteudo = Sistema.sc.nextLine();
-                        System.out.println("Digite o novo prazo da demanda (em dias): ");
-                        int novoPrazo = Sistema.sc.nextInt();
-                        if (novoPrazo < 0 || novoPrazo < d.getPrazo()) {
-                            System.out.println("Prazo inválido, deve ser maior que o atual.");
-                        }
-                        else {
-                            ((Cliente)user).atualizarDemanda(d, novoConteudo, novoPrazo);
-                            System.out.println("Demanda atualizada com sucesso.");
-                        }
-                    }
+    public void loopDemandasAvaliador() {
+        int listLength = 5;
+        
+        loopPaginacaoLista(
+            () -> ((Avaliador)user).getDemandasParaAprovacao().toArray(new Demanda[0]), 
+            
+            listLength, 
+            
+            d -> getDemandaString(d, false), 
+            
+            d -> {
+                System.out.println(getDemandaString(d, true));
+                int escolhaAcao = lerEscolha(new String[]{"Aprovar", "Reprovar", "Voltar"});
+                if (escolhaAcao == 1) {
+                    Desenvolvedor dev = ((Avaliador)user).encaminharDemanda(d);
+                    System.out.println("Demanda encaminhada para o desenvolvedor: " + dev.getNome());
                 }
-                else {
-                    String[] opcoesArray = opcoesDemanda.toArray(new String[0]);
-                    if (opcoesArray[escolhaMsg-1].contains("Próxima")) {
-                        page++;
-                    }
-                    else if (opcoesArray[escolhaMsg-1].contains("Anterior")){
-                        page--;
-                    }
+                else if (escolhaAcao == 2) {
+                    System.out.println("Digite o motivo do retorno da demanda: ");
+                    String motivoRetorno = Sistema.sc.nextLine();
+                    ((Avaliador)user).retornar_demanda(d, motivoRetorno);
                 }
             }
-        }
+        );
+    }
+
+    public void loopTarefasDesenvolvedor(int idDemanda) {
+        int listLength = 5;
+        
+        loopPaginacaoLista(
+            () -> {
+                if (idDemanda < 0) {
+                    return ((Desenvolvedor)user).getTarefasAtribuidas().toArray(new Tarefa[0]);
+                } else {
+                    return ((Desenvolvedor)user).getTarefasAtribuidas().stream()
+                        .filter(x -> x.getDemandaVinculada() == idDemanda)
+                        .toArray(Tarefa[]::new);
+                }
+            },
+
+            listLength, 
+            
+            t -> t.toString(), 
+            
+            t -> {
+                System.out.println();
+                int escolhaEdicao = lerEscolha(new String[]{"Editar", "Voltar"});
+                if (escolhaEdicao == 1) {
+                    System.out.println("Digite o novo conteúdo da tarefa: ");
+                    String novoConteudo = sc.nextLine();
+                
+                    ((Desenvolvedor)user).atualizarTarefa(t, novoConteudo);
+                    System.out.println("Tarefa atualizada com sucesso.");
+                }
+            }
+        );
+    }
+
+    public void loopDemandasDesenvolvedor() {
+        int listLength = 5;
+        
+        loopPaginacaoLista(
+            () -> ((Desenvolvedor)user).getDemandasAtribuidas().toArray(new Demanda[0]), 
+            
+            listLength, 
+            
+            d -> getDemandaString(d, false), 
+            
+            d -> {
+                System.out.println(getDemandaString(d, true));
+                int escolhaAcao = lerEscolha(new String[]{"Criar tarefa", "Gerenciar tarefas", "Entregar demanda", "Voltar"});
+                if (escolhaAcao == 1) {
+                    System.out.print("Digite o título da tarefa: ");
+                    String titulo = Sistema.sc.nextLine();
+                    System.out.print("Digite a descrição da tarefa: ");
+                    String descricao = Sistema.sc.nextLine();
+
+                    ((Desenvolvedor)user).criarTarefa(titulo, descricao, d);
+                }
+                else if (escolhaAcao == 2) {
+                    loopTarefasDesenvolvedor(d.getId());
+                }
+                else if (escolhaAcao == 3) {
+                    System.out.println("Digite 'SIM' para confimar o envio da demanda: ");
+                    String confirmacao = sc.nextLine();
+                    if (confirmacao.equals("SIM")) {
+                        ((Desenvolvedor)user).entregarDemanda(d);
+                        System.out.println("Demanda entregue com sucesso.");
+                    }
+                    else {
+                        System.out.println("Confirmação não sucedida.");
+                    }
+                }
+            }
+        );
     }
 
     public void loopUsuario() {
         boolean ativo = true;
         String[] opcoes = new String[]{};
         switch (user.getTipo()) {
-            case Avaliador:
-                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Gerenciar mensagens", "Logout"};
-                break;
             case Cliente:
                 opcoes = new String[]{"Criar Demanda", "Ver demandas", "Gerenciar mensagens", "Logout"};
                 break;
+            case Avaliador:
+                opcoes = new String[]{"Ver demandas", "Gerenciar mensagens", "Logout"};
+                break;
             case Desenvolvedor:
-                opcoes = new String[]{"Criar Demanda", "Ver demandas", "Gerenciar mensagens", "Logout"};
+                opcoes = new String[]{"Ver demandas", "Ver tarefas", "Gerenciar mensagens", "Logout"};
                 break;
             default:
                 break;
@@ -396,24 +479,33 @@ public class Sistema {
             }
             if (user != null) {
                 switch (user.getTipo()) {
-                    case Avaliador:
-                        if (escolha == 3) {
-                            loopMensagens();
-                        }
-                        break;
                     case Cliente:
-                        if (escolha == 3) {
-                            loopMensagens();
-                        }
-                        else if (escolha == 1) {
+                        if (escolha == 1) {
                             loopCriarDemanda();
                         }
                         else if (escolha == 2) {
-                            loopDemandasLista();
+                            loopDemandasCliente();
+                        }
+                        else if (escolha == 3) {
+                            loopMensagens();
+                        }
+                        break;
+                    case Avaliador:
+                        if (escolha == 1) {
+                            loopDemandasAvaliador();
+                        }
+                        else if (escolha == 2) {
+                            loopMensagens();
                         }
                         break;
                     case Desenvolvedor:
-                        if (escolha == 3) {
+                        if (escolha == 1) {
+                            loopDemandasDesenvolvedor();
+                        }
+                        else if (escolha == 2) {
+                            loopTarefasDesenvolvedor(-1);
+                        }
+                        else if (escolha == 3) {
                             loopMensagens();
                         }
                         break;

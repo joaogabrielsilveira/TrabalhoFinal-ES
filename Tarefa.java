@@ -4,7 +4,7 @@ public class Tarefa {
     private final int id;
     private String titulo;
     private String descricao;
-    private Demanda demandaVinculada;
+    private int idDemandaVinculada;
     private StatusTarefa status;
 
 
@@ -12,7 +12,7 @@ public class Tarefa {
         this.id = ++ID;
         this.titulo = titulo;
         this.descricao = descricao;
-        this.demandaVinculada = demandaVinculada;
+        this.idDemandaVinculada = demandaVinculada.getId();
         this.status = StatusTarefa.EmAndamento;
     }
 
@@ -36,11 +36,18 @@ public class Tarefa {
         return descricao;
     }
 
-    public Demanda getDemandaVinculada() {
-        return demandaVinculada;
+    public int getDemandaVinculada() {
+        return idDemandaVinculada;
     }
 
     public void atualizarTarefa(String novaDescricao) {
         this.descricao = novaDescricao;
     }
+
+    @Override 
+    public String toString() {
+        String txt = String.format("[%s] %s - Demanda %d", this.status, this.titulo, this.idDemandaVinculada);
+        txt += String.format("\n%s", descricao);
+        return txt;
+    } 
 }

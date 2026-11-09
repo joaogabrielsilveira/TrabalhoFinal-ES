@@ -11,6 +11,38 @@ import java.time.format.DateTimeFormatter;
 public class Banco {
 
     private static Gson gson = new GsonBuilder()
+    .setPrettyPrinting()
+    .registerTypeAdapter(Usuario.class, new JsonDeserializer<Usuario>() {
+        @Override
+        public Usuario deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            JsonObject jsonObject = json.getAsJsonObject();
+            
+            if (jsonObject.has("type") && !jsonObject.get("type").isJsonNull()) {
+                String tipoStr = jsonObject.get("type").getAsString();
+                
+                // Use equalsIgnoreCase para não dar erro se for "CLIENTE" ou "Cliente"
+                if (tipoStr.equalsIgnoreCase("Cliente")) {
+                    return context.deserialize(json, Cliente.class);
+                } else if (tipoStr.equalsIgnoreCase("Avaliador")) {
+                    return context.deserialize(json, Avaliador.class);
+                } else if (tipoStr.equalsIgnoreCase("Desenvolvedor")) {
+                    return context.deserialize(json, Desenvolvedor.class);
+                }
+            }
+            
+            // Print de aviso para você saber exatamente se ele falhou ao ler o JSON
+            System.out.println("AVISO: Usuário " + jsonObject.get("email").getAsString() + " carregado como genérico. O cast vai falhar!");
+            
+            Gson fallbackGson = new GsonBuilder()
+                .registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
+                    @Override
+                    public LocalDateTime deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext ctx) {
+                        return LocalDateTime.parse(jsonElement.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                    }
+                }).create();
+            return fallbackGson.fromJson(json, Usuario.class); 
+        }
+    })
     .registerTypeAdapter(LocalDateTime.class, new JsonSerializer<LocalDateTime>() {
         @Override
         public JsonElement serialize(LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {

@@ -2,6 +2,7 @@
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
 
 public class Cliente extends Usuario {
     
@@ -16,6 +17,17 @@ public class Cliente extends Usuario {
         Demanda novaDemanda = new Demanda(this, titulo, descricao, LocalDateTime.now().plusDays(prazo));
         demandasSolicitadas.add(novaDemanda);
         Sistema.atualizarUsuario(this);
+
+        PriorityQueue<Avaliador> minHeapAvaliadoresDisponiveis = new PriorityQueue<>((d1, d2) -> Integer.compare(d1.getDemandasParaAprovacao().size(), d2.getDemandasParaAprovacao().size()));
+
+        for (Avaliador a : Sistema.getAvaliadores()) {
+            minHeapAvaliadoresDisponiveis.offer(a);
+        }
+
+        Avaliador avaliadorSelecionado = minHeapAvaliadoresDisponiveis.poll();
+        avaliadorSelecionado.receberDemanda(novaDemanda, this);
+        Sistema.atualizarUsuario(this);
+
         return novaDemanda;
     }
 
@@ -26,6 +38,7 @@ public class Cliente extends Usuario {
     public Demanda atualizarDemanda(Demanda demandaSelecionada, String novoConteudo, int novoPrazo) {
 
         demandaSelecionada.editarDados(novoConteudo, LocalDateTime.now().plusDays(novoPrazo));
+        Sistema.atualizarUsuario(this);
         return demandaSelecionada;
     }
 }
