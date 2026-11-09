@@ -8,7 +8,8 @@ public class Demanda {
     public static int ID = 0;
 
     private final int id;
-    private Usuario solicitante;
+    private int matriculaSolicitante;
+    private String emailSolicitante;
     private List<Tarefa> tarefas;
     private String titulo;
     private String descricao;
@@ -23,7 +24,8 @@ public class Demanda {
     public Demanda(Usuario solicitante, String titulo, String descricao, LocalDateTime prazo) {
         this.id = ID;
         ID++;
-        this.solicitante = solicitante;
+        this.matriculaSolicitante = solicitante.getMatricula();
+        this.emailSolicitante = solicitante.getEmail();
         this.titulo = titulo;
         this.descricao = descricao;
         this.situacao = StatusDemanda.Aberta;
@@ -54,8 +56,12 @@ public class Demanda {
 
     }
 
-    public Usuario getSolicitante() {
-        return this.solicitante;
+    public int getMatriculaSolicitante() {
+        return this.matriculaSolicitante;
+    }
+
+    public String getEmailSolicitante() {
+        return this.emailSolicitante;
     }
 
     public List<Tarefa> getTarefas() {

@@ -20,7 +20,7 @@ public class Sistema {
         Sistema.users = Banco.recuperarUsuarios();
     }
 
-    public Usuario getUsuario(String email) {
+    public static Usuario getUsuario(String email) {
         Optional<Usuario> query = 
         Sistema.users.stream()
         .filter(usuario -> usuario.getEmail().equals(email))
@@ -139,6 +139,20 @@ public class Sistema {
         }
         else {
             Usuario logged = getUsuario(email);
+            switch (logged.getTipo()) {
+                case TipoUsuario.Cliente:
+                    logged = new Cliente(logged.getMatricula(), senha, email, senha, TipoUsuario.Cliente);
+                    break;
+                case TipoUsuario.Avaliador:
+                    logged = new Avaliador(logged.getMatricula(), senha, email, senha, TipoUsuario.Avaliador);
+                    break;
+                case TipoUsuario.Desenvolvedor:
+                    logged = new Desenvolvedor(logged.getMatricula(), senha, email, senha, TipoUsuario.Desenvolvedor);
+                    break;
+                default:
+                    System.out.println("Tipo de usuário inválido");
+                    break;
+            }
             user = logged;
             System.out.println(String.format("Login do usuário %s realizado com sucesso.", user.getNome()));
         }
@@ -271,6 +285,91 @@ public class Sistema {
         }
     }
 
+    public void loopCriarDemanda() {
+        System.out.println("Digite o título da demanda: ");
+        String titulo = Sistema.sc.nextLine();
+        System.out.println("Digite a descrição da demanda: ");
+        String descricao = Sistema.sc.nextLine();
+        System.out.println("Digite o prazo da demanda (em dias): ");
+        int prazo = Sistema.sc.nextInt();
+
+        Demanda d = ((Cliente)user).solicitarDemanda(titulo, descricao, prazo);
+        System.out.println("Demanda criada com sucesso, ID: " + d.getId());
+    }
+
+    public String getDemandaString(Demanda d, boolean conteudo) {
+        String txt = String.format("[%s] Demanda %d - %s", d.getSituacao(), d.getId(), d.getTitulo());
+        txt += String.format("\nPrazo: %d dias", d.getPrazo());
+        if (conteudo) txt += String.format("\nDescrição: %s", d.getDescricao());
+
+        return txt;
+    }
+
+    public void loopDemandasLista() {
+        boolean ativo = true;
+        int page = 0;
+        int listLength = 5;
+        while (ativo) {
+            Demanda[] demandas = ((Cliente)user).getDemandasSolicitadas().toArray(new Demanda[0]);
+            
+            int numMensagens = demandas.length;
+            int start = page * listLength;
+            int end = Math.min(start+listLength, numMensagens);
+            
+            List<String> opcoesDemanda = new ArrayList<>();
+            for (int i = start; i < end; i++) {
+                opcoesDemanda.add(getDemandaString(demandas[i], false));
+            }
+            
+            boolean hasNextPage, hasPreviousPage;
+            hasNextPage = end < numMensagens;
+            hasPreviousPage = page > 0;
+            
+            if (hasNextPage) {
+                opcoesDemanda.add("Próxima página");
+            }
+            if (hasPreviousPage) {
+                opcoesDemanda.add("Página Anterior");
+            }
+            opcoesDemanda.add("Voltar");
+            
+
+            int escolhaMsg = lerEscolha(opcoesDemanda.toArray(new String[0]));
+            if (escolhaMsg == opcoesDemanda.size() || escolhaMsg == -1) {
+                ativo = false;
+            }
+            else if (escolhaMsg != -1) {
+                if (escolhaMsg <= (end - start)) {
+                    Demanda d = demandas[start + escolhaMsg-1];
+                    System.out.println(getDemandaString(d, true));
+                    int escolhaEdicao = lerEscolha(new String[]{"Editar", "Voltar"});
+                    if (escolhaEdicao == 1) {
+                        System.out.println("Digite o novo conteúdo da demanda: ");
+                        String novoConteudo = Sistema.sc.nextLine();
+                        System.out.println("Digite o novo prazo da demanda (em dias): ");
+                        int novoPrazo = Sistema.sc.nextInt();
+                        if (novoPrazo < 0 || novoPrazo < d.getPrazo()) {
+                            System.out.println("Prazo inválido, deve ser maior que o atual.");
+                        }
+                        else {
+                            ((Cliente)user).atualizarDemanda(d, novoConteudo, novoPrazo);
+                            System.out.println("Demanda atualizada com sucesso.");
+                        }
+                    }
+                }
+                else {
+                    String[] opcoesArray = opcoesDemanda.toArray(new String[0]);
+                    if (opcoesArray[escolhaMsg-1].contains("Próxima")) {
+                        page++;
+                    }
+                    else if (opcoesArray[escolhaMsg-1].contains("Anterior")){
+                        page--;
+                    }
+                }
+            }
+        }
+    }
+
     public void loopUsuario() {
         boolean ativo = true;
         String[] opcoes = new String[]{};
@@ -305,6 +404,12 @@ public class Sistema {
                     case Cliente:
                         if (escolha == 3) {
                             loopMensagens();
+                        }
+                        else if (escolha == 1) {
+                            loopCriarDemanda();
+                        }
+                        else if (escolha == 2) {
+                            loopDemandasLista();
                         }
                         break;
                     case Desenvolvedor:

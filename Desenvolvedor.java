@@ -53,7 +53,8 @@ public class Desenvolvedor extends Usuario {
         
         demandaEntregue.setSituacao(StatusDemanda.Finalizada);
         demandaEntregue.getTarefas().clear();
-        enviarMensagem("Demanda finalizada", "Sua demanda foi finalizada pelo desenvolvedor.", demandaEntregue.getSolicitante());
+        Usuario cliente = Sistema.getUsuario(demandaEntregue.getEmailSolicitante());
+        enviarMensagem("Demanda finalizada", String.format("Sua demanda %s [id %d] foi finalizada pelo desenvolvedor.", demandaEntregue.getTitulo(), demandaEntregue.getId()), cliente);
 
         return demandaEntregue;
     }

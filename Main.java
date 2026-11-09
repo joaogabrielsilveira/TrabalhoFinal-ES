@@ -16,13 +16,29 @@ public class Main {
             "lucas123",
             TipoUsuario.Cliente
         );
+        Usuario ava = new Usuario(
+            2,
+            "Pedro",
+            "pedro@gmail.com",
+            "pedro23",
+            TipoUsuario.Cliente
+        );
+        Usuario dev = new Usuario(
+            3, 
+            "Tiago",
+            "tiago@gmail.com",
+            "tiago123",
+            TipoUsuario.Cliente
+        );
         
         for (int i = 0; i < 10; i++) {
-            rem.enviarMensagem("Mensagem" + i, "Opa cara te mandando uma mensagem numero " + i + " valeu", dest);
+            rem.enviarMensagem("Mensagem" + (i+1), "Opa cara te mandando uma mensagem numero " + (i+1) + " valeu", dest);
         }
         
         Banco.salvarUsuario(rem);
         Banco.salvarUsuario(dest);
+        Banco.salvarUsuario(ava);
+        Banco.salvarUsuario(dev);
         
         Sistema s = new Sistema();
         s.loopSistema();
