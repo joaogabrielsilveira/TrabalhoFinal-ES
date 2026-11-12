@@ -23,6 +23,8 @@ public class Banco {
     private static final String ARQ_DEMANDAS = DIR + "/demandas.json";
     private static final String ARQ_TAREFAS = DIR + "/tarefas.json";
     private static final String ARQ_MENSAGENS = DIR + "/mensagens.json";
+    private static final String ARQ_LOGS = DIR + "/logs.json";
+
 
     private static final Gson gson = new GsonBuilder()
         .setPrettyPrinting()
@@ -118,4 +120,16 @@ public class Banco {
             System.out.println("ERRO ao gravar " + caminho + ": " + e.getMessage());
         }
     }
+
+    // Leitura no início 
+    public static List<Log> carregarLogs() {
+        Log[] array = gson.fromJson(ler(ARQ_LOGS), Log[].class);
+        return (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
+    }
+
+    // Gravação sempre que um novo log for gerado
+    public static void salvarLogs(Collection<Log> logs) {
+        gravar(ARQ_LOGS, gson.toJson(new ArrayList<>(logs)));
+    }
+
 }
