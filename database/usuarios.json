@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "idsDemandasSolicitadas": [
+      0,
+      1
+    ],
+    "matricula": 0,
+    "nome": "João",
+    "email": "joao@gmail.com",
+    "senha": "$2a$10$6x0OdgQzmRiF/tB8H9YwNeXMA10JlvSzC2aOkNvQgwEwMox1aqlpe",
+    "type": "Cliente"
+  },
+  {
+    "idsDemandasSolicitadas": [],
+    "matricula": 1,
+    "nome": "Lucas",
+    "email": "lucas@gmail.com",
+    "senha": "$2a$10$cE8aw3grpfobgKPP8rLt6eSZ8GvJbgF3tq7nWHk3M8yJzA5bhnsHm",
+    "type": "Cliente"
+  },
+  {
+    "idsParaAprovacao": [],
+    "idsAprovadas": [
+      0,
+      1
+    ],
+    "matricula": 2,
+    "nome": "Pedro",
+    "email": "pedro@gmail.com",
+    "senha": "$2a$10$01rLY9ajs1fszgngj/x.hePH9dKQNo6JXZbbxQwazCF7Fk6OV5LFO",
+    "type": "Avaliador"
+  },
+  {
+    "idsDemandasAtribuidas": [
+      0,
+      1
+    ],
+    "matricula": 3,
+    "nome": "Tiago",
+    "email": "tiago@gmail.com",
+    "senha": "$2a$10$r4YAs5f7DiqNsBa5wORMmenxraqmSAh1lHGkrqAmIkrvgxQUZKrn6",
+    "type": "Desenvolvedor"
+  }
+]

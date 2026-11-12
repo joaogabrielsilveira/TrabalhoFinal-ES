@@ -1,128 +1,106 @@
 import com.google.gson.*;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.lang.reflect.Type;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
+/**
+ * Camada de persistência.
+ *
+ * Regra: o Banco só LÊ no início do programa e só GRAVA "fotografias" das coleções
+ * que vivem em memória no Sistema. Ele nunca devolve objetos para substituir
+ * os que já estão em uso, então não existem mais cópias divergentes.
+ */
 public class Banco {
 
-    private static Gson gson = new GsonBuilder()
-    .setPrettyPrinting()
-    .registerTypeAdapter(Usuario.class, new JsonDeserializer<Usuario>() {
-        @Override
-        public Usuario deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            JsonObject jsonObject = json.getAsJsonObject();
-            
-            if (jsonObject.has("type") && !jsonObject.get("type").isJsonNull()) {
-                String tipoStr = jsonObject.get("type").getAsString();
-                
-                // Use equalsIgnoreCase para não dar erro se for "CLIENTE" ou "Cliente"
-                if (tipoStr.equalsIgnoreCase("Cliente")) {
-                    return context.deserialize(json, Cliente.class);
-                } else if (tipoStr.equalsIgnoreCase("Avaliador")) {
-                    return context.deserialize(json, Avaliador.class);
-                } else if (tipoStr.equalsIgnoreCase("Desenvolvedor")) {
-                    return context.deserialize(json, Desenvolvedor.class);
-                }
-            }
-            
-            // Print de aviso para você saber exatamente se ele falhou ao ler o JSON
-            System.out.println("AVISO: Usuário " + jsonObject.get("email").getAsString() + " carregado como genérico. O cast vai falhar!");
-            
-            Gson fallbackGson = new GsonBuilder()
-                .registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
-                    @Override
-                    public LocalDateTime deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext ctx) {
-                        return LocalDateTime.parse(jsonElement.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    private static final String DIR = "database";
+    private static final String ARQ_USUARIOS = DIR + "/usuarios.json";
+    private static final String ARQ_DEMANDAS = DIR + "/demandas.json";
+    private static final String ARQ_TAREFAS = DIR + "/tarefas.json";
+    private static final String ARQ_MENSAGENS = DIR + "/mensagens.json";
+
+    private static final Gson gson = new GsonBuilder()
+        .setPrettyPrinting()
+        .registerTypeAdapter(Usuario.class, new JsonDeserializer<Usuario>() {
+            @Override
+            public Usuario deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                JsonObject jsonObject = json.getAsJsonObject();
+
+                if (jsonObject.has("type") && !jsonObject.get("type").isJsonNull()) {
+                    String tipoStr = jsonObject.get("type").getAsString();
+
+                    if (tipoStr.equalsIgnoreCase("Cliente")) {
+                        return context.deserialize(json, Cliente.class);
+                    } else if (tipoStr.equalsIgnoreCase("Avaliador")) {
+                        return context.deserialize(json, Avaliador.class);
+                    } else if (tipoStr.equalsIgnoreCase("Desenvolvedor")) {
+                        return context.deserialize(json, Desenvolvedor.class);
                     }
-                }).create();
-            return fallbackGson.fromJson(json, Usuario.class); 
-        }
-    })
-    .registerTypeAdapter(LocalDateTime.class, new JsonSerializer<LocalDateTime>() {
-        @Override
-        public JsonElement serialize(LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {
-            return new JsonPrimitive(src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        }
-    })
-    .registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
-        @Override
-        public LocalDateTime deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            return LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        }
-    })
-    .create();
+                }
 
-    public static void salvarUsuario(Usuario novo) {
-        Usuario[] array = gson.fromJson(ler("database/usuarios.json"), Usuario[].class);
-        List<Usuario> lista = (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
-        lista.add(novo);
-        gravar("database/usuarios.json", gson.toJson(lista));
-    }
-
-    public static void excluirUsuario(Usuario u) {
-        Usuario[] array = gson.fromJson(ler("database/usuarios.json"), Usuario[].class);
-        List<Usuario> lista = (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
-        lista.removeIf(usuario -> usuario.getEmail().equals(u.getEmail()));
-        gravar("database/usuarios.json", gson.toJson(lista));
-    }
-
-    public static List<Usuario> recuperarUsuarios() {
-        Usuario[] array = gson.fromJson(ler("database/usuarios.json"), Usuario[].class);
-        return (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
-    }
-
-    public static void armazenarDemanda(Demanda d) {
-        Demanda[] array = gson.fromJson(ler("database/demandas.json"), Demanda[].class);
-        List<Demanda> lista = (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
-        lista.add(d);
-        gravar("database/demandas.json", gson.toJson(lista));
-    }
-
-    public static List<Demanda> recuperarDemandas() {
-        Demanda[] array = gson.fromJson(ler("database/demandas.json"), Demanda[].class);
-        return (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
-    }
-
-    public static void excluirDemanda(Demanda d) {
-        List<Demanda> lista = recuperarDemandas();
-        lista.removeIf(demanda -> demanda.getTitulo().equals(d.getTitulo()));
-        gravar("database/demandas.json", gson.toJson(lista));
-    }
-
-    public static void editarDemanda(Demanda dAtualizada) {
-        List<Demanda> lista = recuperarDemandas();
-        for (int i = 0; i < lista.size(); i++) {
-            if (lista.get(i).getTitulo().equals(dAtualizada.getTitulo())) {
-                lista.set(i, dAtualizada);
-                break;
+                throw new JsonParseException("Usuário sem campo 'type' válido: " + json);
             }
-        }
-        gravar("database/demandas.json", gson.toJson(lista));
-    }
+        })
+        .registerTypeAdapter(LocalDateTime.class, new JsonSerializer<LocalDateTime>() {
+            @Override
+            public JsonElement serialize(LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {
+                return new JsonPrimitive(src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            }
+        })
+        .registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
+            @Override
+            public LocalDateTime deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                return LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
+        })
+        .create();
 
-    public static void armazenarTarefa(Tarefa t) {
-            Tarefa[] array = gson.fromJson(ler("database/tarefas.json"), Tarefa[].class);
-            List<Tarefa> lista = (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
-            lista.add(t);
-            gravar("database/tarefas.json", gson.toJson(lista));
-        }
+    // ---------- leitura (chamada uma única vez, no construtor do Sistema) ----------
 
-    public static void armazenarMensagem(Mensagem m) {
-        Mensagem[] array = gson.fromJson(ler("database/mensagems.json"), Mensagem[].class);
-        List<Mensagem> lista = (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
-        lista.add(m);
-        gravar("database/mensagems.json", gson.toJson(lista));
-    }
-
-    public static List<Mensagem> recuperarMensagens() {
-        Mensagem[] array = gson.fromJson(ler("database/mensagems.json"), Mensagem[].class);
+    public static List<Usuario> carregarUsuarios() {
+        Usuario[] array = gson.fromJson(ler(ARQ_USUARIOS), Usuario[].class);
         return (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
     }
+
+    public static List<Demanda> carregarDemandas() {
+        Demanda[] array = gson.fromJson(ler(ARQ_DEMANDAS), Demanda[].class);
+        return (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
+    }
+
+    public static List<Tarefa> carregarTarefas() {
+        Tarefa[] array = gson.fromJson(ler(ARQ_TAREFAS), Tarefa[].class);
+        return (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
+    }
+
+    public static List<Mensagem> carregarMensagens() {
+        Mensagem[] array = gson.fromJson(ler(ARQ_MENSAGENS), Mensagem[].class);
+        return (array != null) ? new ArrayList<>(Arrays.asList(array)) : new ArrayList<>();
+    }
+
+    // ---------- gravação (snapshot completo da coleção em memória) ----------
+
+    public static void salvarUsuarios(Collection<Usuario> usuarios) {
+        gravar(ARQ_USUARIOS, gson.toJson(new ArrayList<>(usuarios)));
+    }
+
+    public static void salvarDemandas(Collection<Demanda> demandas) {
+        gravar(ARQ_DEMANDAS, gson.toJson(new ArrayList<>(demandas)));
+    }
+
+    public static void salvarTarefas(Collection<Tarefa> tarefas) {
+        gravar(ARQ_TAREFAS, gson.toJson(new ArrayList<>(tarefas)));
+    }
+
+    public static void salvarMensagens(Collection<Mensagem> mensagens) {
+        gravar(ARQ_MENSAGENS, gson.toJson(new ArrayList<>(mensagens)));
+    }
+
+    // ---------- I/O ----------
 
     private static String ler(String caminho) {
         try {
@@ -134,7 +112,10 @@ public class Banco {
 
     private static void gravar(String caminho, String conteudo) {
         try {
+            Files.createDirectories(Path.of(DIR));
             Files.writeString(Path.of(caminho), conteudo);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            System.out.println("ERRO ao gravar " + caminho + ": " + e.getMessage());
+        }
     }
 }

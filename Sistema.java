@@ -1,5 +1,6 @@
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -8,71 +9,137 @@ import java.util.Scanner;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class Sistema {
 
     Usuario user = null;
     public static Scanner sc = new Scanner(System.in);
-    public static DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static List<Usuario> users;
-    private static List<Desenvolvedor> d;
-    private static List<Cliente> c;
-    private static List<Avaliador> a;
-
-    public Sistema() {
-        Sistema.users = Banco.recuperarUsuarios();
-        Sistema.d = new ArrayList<>();
-        Sistema.c = new ArrayList<>();
-        Sistema.a = new ArrayList<>();
+    public static void limparConsole() {
+    try {
+        if (System.getProperty("os.name").toLowerCase().contains("win")) {
+            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+        } else {
+            System.out.print("\033[H\033[2J");   // código ANSI: cursor no topo + limpa a tela
+            System.out.flush();
+        }
+    } catch (Exception e) {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
     }
+}
+    public static DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    // ---- Fonte única da verdade: cada entidade existe UMA vez, aqui em memória ----
+    private static final Map<String, Usuario> users = new LinkedHashMap<>();      // chave: email
+    private static final Map<Integer, Demanda> demandas = new LinkedHashMap<>();  // chave: id
+    private static final Map<Integer, Tarefa> tarefas = new LinkedHashMap<>();    // chave: id
+    private static final List<Mensagem> mensagens = new ArrayList<>();
+
+    /** Lê o disco UMA vez. Depois disso, tudo vive em memória e só é gravado. */
+    public Sistema() {
+        users.clear();
+        demandas.clear();
+        tarefas.clear();
+        mensagens.clear();
+
+        for (Usuario u : Banco.carregarUsuarios()) users.put(u.getEmail(), u);
+        for (Demanda d : Banco.carregarDemandas()) demandas.put(d.getId(), d);
+        for (Tarefa t : Banco.carregarTarefas()) tarefas.put(t.getId(), t);
+        mensagens.addAll(Banco.carregarMensagens());
+
+        // Contadores estáticos voltam de onde pararam (senão os IDs colidem a cada execução)
+        Usuario.restaurarContador(users.values().stream().mapToInt(Usuario::getMatricula).max().orElse(-1) + 1);
+        Demanda.ID = demandas.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1) + 1;
+        Tarefa.ID = tarefas.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
+        Mensagem.ID = mensagens.stream().mapToInt(Mensagem::getId).max().orElse(-1) + 1;
+    }
+
+    // ---------------- Usuários ----------------
 
     public static Usuario getUsuario(String email) {
-        if (users == null) {
-            return null;
-        }
-        Optional<Usuario> query = 
-        Sistema.users.stream()
-        .filter(usuario -> usuario.getEmail().equals(email))
-        .findFirst();
-
-        if (!query.isPresent()) {
-            return null;
-        }
-
-        return query.get();
+        if (email == null) return null;
+        return users.get(email);
     }
 
-    public void registrarUsuario(Usuario u) {
-        Banco.salvarUsuario(u);
-        switch (u.getTipo()) {
-            case Cliente:
-                c.add((Cliente)u);
-                break;
-            case Avaliador:
-                a.add((Avaliador)u);
-                break;
-            case Desenvolvedor:
-                d.add((Desenvolvedor)u);
-                break;
-            default:
-                break;
+    public boolean registrarUsuario(Usuario u) {
+        if (users.containsKey(u.getEmail())) {
+            return false;
         }
-        Sistema.users = Banco.recuperarUsuarios();
+        users.put(u.getEmail(), u);
+        salvarUsuarios();
+        return true;
     }
 
-    public void excluirUsuario(Usuario u) {
-        //Demais operações
-
-        Banco.excluirUsuario(u);
-        Sistema.users = Banco.recuperarUsuarios();
+    public static void excluirUsuario(Usuario u) {
+        // Demais operações (demandas, mensagens...) ficam como TODO, como no original
+        users.remove(u.getEmail());
+        salvarUsuarios();
     }
 
+    /** Mantido por compatibilidade: o objeto já está na memória, só precisa gravar. */
     public static void atualizarUsuario(Usuario u) {
-        Banco.excluirUsuario(u);
-        
-        Banco.salvarUsuario(u);
-        Sistema.users = Banco.recuperarUsuarios();
+        salvarUsuarios();
     }
+
+    // ---------------- Demandas / Tarefas / Mensagens ----------------
+
+    public static void registrarDemanda(Demanda d) {
+        demandas.put(d.getId(), d);
+        salvarDemandas();
+    }
+
+    public static Demanda getDemanda(int id) {
+        return demandas.get(id);
+    }
+
+    public static void registrarTarefa(Tarefa t) {
+        tarefas.put(t.getId(), t);
+        salvarTarefas();
+    }
+
+    public static List<Tarefa> getTarefas() {
+        return new ArrayList<>(tarefas.values());
+    }
+
+    public static List<Tarefa> getTarefasDaDemanda(int idDemanda) {
+        return tarefas.values().stream()
+            .filter(t -> t.getDemandaVinculada() == idDemanda)
+            .collect(Collectors.toList());
+    }
+
+    public static void removerTarefasDaDemanda(int idDemanda) {
+        tarefas.values().removeIf(t -> t.getDemandaVinculada() == idDemanda);
+        salvarTarefas();
+    }
+
+    public static void registrarMensagem(Mensagem m) {
+        mensagens.add(m);
+        salvarMensagens();
+    }
+
+    /** Mais recentes primeiro. */
+    public static List<Mensagem> getMensagensRecebidas(String email) {
+        List<Mensagem> r = new ArrayList<>();
+        for (int i = mensagens.size() - 1; i >= 0; i--) {
+            if (mensagens.get(i).getEmailDestinatario().equals(email)) r.add(mensagens.get(i));
+        }
+        return r;
+    }
+
+    public static List<Mensagem> getMensagensEnviadas(String email) {
+        List<Mensagem> r = new ArrayList<>();
+        for (int i = mensagens.size() - 1; i >= 0; i--) {
+            if (mensagens.get(i).getEmailRemetente().equals(email)) r.add(mensagens.get(i));
+        }
+        return r;
+    }
+
+    // ---------------- Persistência (só grava; nunca recarrega) ----------------
+
+    public static void salvarUsuarios()  { Banco.salvarUsuarios(users.values()); }
+    public static void salvarDemandas()  { Banco.salvarDemandas(demandas.values()); }
+    public static void salvarTarefas()   { Banco.salvarTarefas(tarefas.values()); }
+    public static void salvarMensagens() { Banco.salvarMensagens(mensagens); }
 
     public boolean login(String email, String senha) {
         
@@ -112,6 +179,8 @@ public class Sistema {
 
         sc.nextLine();
 
+        if (valid) limparConsole();
+
         return valid ? escolha : -1;
     }
 
@@ -132,20 +201,16 @@ public class Sistema {
         System.out.println("Escolha o tipo de conta: ");
         int escolhaTipo = -1;
         while ((escolhaTipo = lerEscolha(new String[]{"Cliente", "Avaliador", "Desenvolvedor"})) < 0);
-        TipoUsuario tipo = TipoUsuario.Cliente;
-
-        Usuario novo = new Usuario(0, nome, email, senha, tipo);
+        Usuario novo;
         switch (escolhaTipo) {
             case 1:
-                tipo = TipoUsuario.Cliente;
-                novo = new Cliente(0, nome, email, senha, tipo);
+                novo = new Cliente(0, nome, email, senha, TipoUsuario.Cliente);
+                break;
             case 2:
-                tipo = TipoUsuario.Avaliador;
-                novo = new Desenvolvedor(0, nome, email, senha, tipo);
-            case 3:
-                tipo = TipoUsuario.Desenvolvedor;
-                novo = new Avaliador(0, nome, email, senha, tipo);
+                novo = new Avaliador(0, nome, email, senha, TipoUsuario.Avaliador);
+                break;
             default:
+                novo = new Desenvolvedor(0, nome, email, senha, TipoUsuario.Desenvolvedor);
                 break;
         }
 
@@ -198,6 +263,11 @@ public class Sistema {
             int numItens = itens.length;
             int start = page * listLength;
             int end = Math.min(start + listLength, numItens);
+
+            if (itens.length == 0) {
+                System.out.println("Nenhuma opção disponível.");
+                return;
+            }
             
             List<String> opcoes = new ArrayList<>();
             for (int i = start; i < end; i++) {
@@ -252,6 +322,8 @@ public class Sistema {
             m -> {
                 System.out.println(getMessageString(m, true, false));
                 if (escolha == 1) {
+                    m.setLida();
+                    salvarMensagens(); // getConteudo() marcou a mensagem como lida
                     int escolhaResposta = lerEscolha(new String[]{"Responder", "Voltar"});
                     if (escolhaResposta == 1) {
                         Usuario destUser = getUsuario(m.getEmailRemetente());
@@ -272,18 +344,43 @@ public class Sistema {
     }
 
     public boolean loopMensagensEscrever() {
-        System.out.print("Digite o email do destinatário: ");
-        String emailDest = sc.nextLine();
-        Usuario dest = getUsuario(emailDest);
-        if (dest == null) {
-            System.out.println("Email não encontrado.");
-            return false;
+        // System.out.print("Digite o email do destinatário: ");
+
+
+        // String emailDest = sc.nextLine();
+        int listLength = 5;
+        List<Usuario> destinatarios = new ArrayList<>();
+        switch (user.getTipo()) {
+            case Cliente:
+                loopPaginacaoLista(
+                    () -> {
+                        destinatarios.clear();
+                        for (Demanda d : ((Cliente)user).getDemandasSolicitadas()) {
+                            if (d.getSituacao() == StatusDemanda.EmAndamento && getUsuario(d.getEmailDesenvolvedor()) != null)
+                                destinatarios.add(getUsuario(d.getEmailDesenvolvedor()));
+                        }
+
+                        return destinatarios.toArray(new Usuario[0]);
+                    },
+                    listLength, 
+                    u -> u.getNome() + " [" + u.getEmail() + "]",
+                    u -> {
+                        System.out.print("Digite o título da mensagem: ");
+                        String titulo = sc.nextLine();
+                        System.out.println("Digite o conteúdo da mensagem: ");
+                        String conteudo = sc.nextLine();
+                        user.enviarMensagem(titulo, conteudo, u);
+                    }
+                );
+                break;
+            case Desenvolvedor:
+                break;
+            case Avaliador:
+                break;
+            default:
+                break;
         }
-        System.out.print("Digite o título da mensagem: ");
-        String titulo = sc.nextLine();
-        System.out.println("Digite o conteúdo da mensagem: ");
-        String conteudo = sc.nextLine();
-        user.enviarMensagem(titulo, conteudo, dest);
+        
         return true;
     }
 
@@ -311,6 +408,7 @@ public class Sistema {
         String descricao = Sistema.sc.nextLine();
         System.out.println("Digite o prazo da demanda (em dias): ");
         int prazo = Sistema.sc.nextInt();
+        Sistema.sc.nextLine();
 
         Demanda d = ((Cliente)user).solicitarDemanda(titulo, descricao, prazo);
         System.out.println("Demanda criada com sucesso, ID: " + d.getId());
@@ -345,6 +443,7 @@ public class Sistema {
                     String novoConteudo = Sistema.sc.nextLine();
                     System.out.println("Digite o novo prazo da demanda (em dias): ");
                     int novoPrazo = Sistema.sc.nextInt();
+                    Sistema.sc.nextLine();
                     if (novoPrazo < 0 || novoPrazo < d.getPrazo()) {
                         System.out.println("Prazo inválido, deve ser maior que o atual.");
                     } else {
@@ -371,12 +470,16 @@ public class Sistema {
                 int escolhaAcao = lerEscolha(new String[]{"Aprovar", "Reprovar", "Voltar"});
                 if (escolhaAcao == 1) {
                     Desenvolvedor dev = ((Avaliador)user).encaminharDemanda(d);
-                    System.out.println("Demanda encaminhada para o desenvolvedor: " + dev.getNome());
+                    if (dev == null) {
+                        System.out.println("Nenhum desenvolvedor cadastrado para receber a demanda.");
+                    } else {
+                        System.out.println("Demanda encaminhada para o desenvolvedor: " + dev.getNome());
+                    }
                 }
                 else if (escolhaAcao == 2) {
                     System.out.println("Digite o motivo do retorno da demanda: ");
                     String motivoRetorno = Sistema.sc.nextLine();
-                    ((Avaliador)user).retornar_demanda(d, motivoRetorno);
+                    ((Avaliador)user).retornarDemanda(d, motivoRetorno);
                 }
             }
         );
@@ -402,13 +505,17 @@ public class Sistema {
             
             t -> {
                 System.out.println();
-                int escolhaEdicao = lerEscolha(new String[]{"Editar", "Voltar"});
+                int escolhaEdicao = lerEscolha(new String[]{"Editar", "Concluir", "Voltar"});
                 if (escolhaEdicao == 1) {
-                    System.out.println("Digite o novo conteúdo da tarefa: ");
+                    System.out.print("Digite o novo conteúdo da tarefa: ");
                     String novoConteudo = sc.nextLine();
                 
                     ((Desenvolvedor)user).atualizarTarefa(t, novoConteudo);
                     System.out.println("Tarefa atualizada com sucesso.");
+                }
+                else if (escolhaEdicao == 2) {
+                    ((Desenvolvedor)user).finalizarTarefa(t);
+                    System.out.println("Tarefa finalizada com sucesso.");
                 }
             }
         );
@@ -456,6 +563,7 @@ public class Sistema {
     public void loopUsuario() {
         boolean ativo = true;
         String[] opcoes = new String[]{};
+        user = getUsuario(user.getEmail());
         switch (user.getTipo()) {
             case Cliente:
                 opcoes = new String[]{"Criar Demanda", "Ver demandas", "Gerenciar mensagens", "Logout"};
@@ -545,14 +653,23 @@ public class Sistema {
     }
 
     public static List<Desenvolvedor> getDesenvolvedores() {
-        return d;
+        return users.values().stream()
+            .filter(u -> u.getTipo() == TipoUsuario.Desenvolvedor)
+            .map(u -> (Desenvolvedor) u)
+            .collect(Collectors.toList());
     }
 
     public static List<Cliente> getClientes() {
-        return c;
+        return users.values().stream()
+            .filter(u -> u.getTipo() == TipoUsuario.Cliente)
+            .map(u -> (Cliente) u)
+            .collect(Collectors.toList());
     }
 
     public static List<Avaliador> getAvaliadores() {
-        return a;
+        return users.values().stream()
+            .filter(u -> u.getTipo() == TipoUsuario.Avaliador)
+            .map(u -> (Avaliador) u)
+            .collect(Collectors.toList());
     }
 }

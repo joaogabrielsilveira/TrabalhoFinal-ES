@@ -1,7 +1,5 @@
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-
-import java.util.ArrayList;
 import java.util.List;
 
 public class Usuario {
@@ -12,8 +10,7 @@ public class Usuario {
     private String email;
     private String senha;
     private TipoUsuario type;
-    private List<Mensagem> mensagensRecebidas = new ArrayList<>();
-    private List<Mensagem> mensagensEnviadas = new ArrayList<>();
+    // As mensagens NÃO ficam mais aqui: existem uma única vez, no Sistema.
 
     public Usuario(int matricula, String nome, String email, String senha, TipoUsuario tipo) {
         this.matricula = ID;
@@ -25,27 +22,32 @@ public class Usuario {
         this.type = tipo;
     }
 
-    public boolean equals(Usuario outro) {
-        return this.matricula == outro.matricula;
+    /** Chamado pelo Sistema ao carregar o banco, para não repetir matrículas. */
+    public static void restaurarContador(int proximo) {
+        ID = proximo;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return (o instanceof Usuario outro) && this.matricula == outro.matricula;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(matricula);
     }
 
     public void enviarMensagem(String titulo, String conteudo, Usuario destinatario) {
-
-        Mensagem novaMensagem = new Mensagem(titulo, conteudo, this, destinatario);
-
-        Banco.armazenarMensagem(novaMensagem);
-        this.mensagensEnviadas.addFirst(novaMensagem);
-        destinatario.mensagensRecebidas.addFirst(novaMensagem);
-        Sistema.atualizarUsuario(this);
-        Sistema.atualizarUsuario(destinatario);
+        Mensagem nova = new Mensagem(titulo, conteudo, this, destinatario);
+        Sistema.registrarMensagem(nova);
     }
 
     public List<Mensagem> getMensagensRecebidas() {
-        return this.mensagensRecebidas;
+        return Sistema.getMensagensRecebidas(this.email);
     }
 
     public List<Mensagem> getMensagensEnviadas() {
-        return this.mensagensEnviadas;
+        return Sistema.getMensagensEnviadas(this.email);
     }
 
     public String getEmail() {
@@ -69,6 +71,6 @@ public class Usuario {
     }
 
     public void delete() {
-        Banco.excluirUsuario(this);
+        Sistema.excluirUsuario(this);
     }
 }

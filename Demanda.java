@@ -1,5 +1,4 @@
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -10,16 +9,17 @@ public class Demanda {
     private final int id;
     private int matriculaSolicitante;
     private String emailSolicitante;
-    private List<Tarefa> tarefas;
     private String titulo;
     private String descricao;
     private StatusDemanda situacao;
     private PrioridadeDemanda prioridade;
     @SuppressWarnings("unused")
-    private LocalDateTime data_criacao;
+    private LocalDateTime dataCriacao;
     @SuppressWarnings("unused")
     private LocalDateTime encerramento;
     private LocalDateTime prazo;
+    private String emailAvaliadorAlocado;
+    private String emailDesenvolvedorAlocado;
 
     public Demanda(Usuario solicitante, String titulo, String descricao, LocalDateTime prazo) {
         this.id = ID;
@@ -29,9 +29,8 @@ public class Demanda {
         this.titulo = titulo;
         this.descricao = descricao;
         this.situacao = StatusDemanda.Aberta;
-        this.data_criacao = LocalDateTime.now();
+        this.dataCriacao = LocalDateTime.now();
         this.prazo = prazo;
-        this.tarefas = new ArrayList<>();
     }
 
     public StatusDemanda getSituacao() {
@@ -65,7 +64,8 @@ public class Demanda {
     }
 
     public List<Tarefa> getTarefas() {
-        return this.tarefas;
+        // Derivado do Sistema: as tarefas existem uma única vez lá.
+        return Sistema.getTarefasDaDemanda(this.id);
     }
 
     public void editarDados(String novoConteudo, LocalDateTime novoPrazo) {
@@ -76,7 +76,7 @@ public class Demanda {
     public void checarPrazo() {
 
         System.out.println("O prazo da demanda é: " + this.prazo);
-        System.out.println("Dias restantes: %d " + LocalDateTime.now().until(this.prazo, java.time.temporal.ChronoUnit.DAYS));
+        System.out.println("Dias restantes: " + LocalDateTime.now().until(this.prazo, java.time.temporal.ChronoUnit.DAYS));
 
         if (LocalDateTime.now().isAfter(this.prazo)) {
             System.out.println("A demanda está atrasada.");
@@ -99,6 +99,22 @@ public class Demanda {
 
     public PrioridadeDemanda getPrioridade() {
         return this.prioridade;
+    }
+
+    public String getEmailAvaliador() {
+        return this.emailAvaliadorAlocado;
+    }
+
+    public String getEmailDesenvolvedor() {
+        return this.emailDesenvolvedorAlocado;
+    }
+
+    public void setEmailAvaliador(String email) {
+        this.emailAvaliadorAlocado = email;
+    }
+
+    public void setEmailDesenvolvedor(String email) {
+        this.emailDesenvolvedorAlocado = email;
     }
 
     public void finalizarDemanda() {

@@ -1,0 +1,79 @@
+[
+  {
+    "id": 0,
+    "titulo": "Mensagem1",
+    "conteudo": "Opa cara te mandando uma mensagem numero 1 valeu",
+    "nomeRemetente": "João",
+    "emailRemetente": "joao@gmail.com",
+    "nomeDestinatario": "Lucas",
+    "emailDestinatario": "lucas@gmail.com",
+    "horarioEnvio": "2026-11-11T22:53:46.018486032",
+    "lida": false
+  },
+  {
+    "id": 1,
+    "titulo": "Demanda encaminhada",
+    "conteudo": "Sua demanda (yuasdgbuiasdbas) [id 0] foi encaminhada para o avaliador: Pedro",
+    "nomeRemetente": "Pedro",
+    "emailRemetente": "pedro@gmail.com",
+    "nomeDestinatario": "João",
+    "emailDestinatario": "joao@gmail.com",
+    "horarioEnvio": "2026-11-11T22:53:55.966406272",
+    "lida": true
+  },
+  {
+    "id": 2,
+    "titulo": "Demanda encaminhada",
+    "conteudo": "Sua demanda (yuasdgbuiasdbas) [id 0] foi encaminhada para o desenvolvedor: Tiago",
+    "nomeRemetente": "Pedro",
+    "emailRemetente": "pedro@gmail.com",
+    "nomeDestinatario": "João",
+    "emailDestinatario": "joao@gmail.com",
+    "horarioEnvio": "2026-11-11T22:54:19.552566156",
+    "lida": true
+  },
+  {
+    "id": 3,
+    "titulo": "Demanda finalizada",
+    "conteudo": "Sua demanda (yuasdgbuiasdbas) [id 0] foi finalizada pelo desenvolvedor.",
+    "nomeRemetente": "Tiago",
+    "emailRemetente": "tiago@gmail.com",
+    "nomeDestinatario": "João",
+    "emailDestinatario": "joao@gmail.com",
+    "horarioEnvio": "2026-11-11T22:55:22.66296584",
+    "lida": false
+  },
+  {
+    "id": 4,
+    "titulo": "Demanda encaminhada",
+    "conteudo": "Sua demanda (Demanda maneira 1) [id 1] foi encaminhada para o avaliador: Pedro",
+    "nomeRemetente": "Pedro",
+    "emailRemetente": "pedro@gmail.com",
+    "nomeDestinatario": "João",
+    "emailDestinatario": "joao@gmail.com",
+    "horarioEnvio": "2026-11-11T23:02:49.417983175",
+    "lida": false
+  },
+  {
+    "id": 5,
+    "titulo": "Demanda encaminhada",
+    "conteudo": "Sua demanda (Demanda maneira 1) [id 1] foi encaminhada para o desenvolvedor: Tiago",
+    "nomeRemetente": "Pedro",
+    "emailRemetente": "pedro@gmail.com",
+    "nomeDestinatario": "João",
+    "emailDestinatario": "joao@gmail.com",
+    "horarioEnvio": "2026-11-11T23:03:53.388598509",
+    "lida": false
+  },
+  {
+    "id": 6,
+    "titulo": "Demanda finalizada",
+    "conteudo": "Sua demanda (Demanda maneira 1) [id 1] foi finalizada pelo desenvolvedor.",
+    "nomeRemetente": "Tiago",
+    "emailRemetente": "tiago@gmail.com",
+    "nomeDestinatario": "João",
+    "emailDestinatario": "joao@gmail.com",
+    "horarioEnvio": "2026-11-11T23:05:25.704267025",
+    "lida": false
+  }
+]

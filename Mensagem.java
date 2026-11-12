@@ -34,7 +34,7 @@ public class Mensagem {
     }
 
     public String getConteudo() {
-        setLida();
+        // setLida();
         return conteudo;
     }
 

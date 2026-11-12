@@ -1,1 +1,28 @@
-[{"titulo":"Sistema exemplo","descricao":"Isso é só um exemplo","situacao":"Incompleta","prioridade":"1","data_criacao":"2026-11-02T15:28:48.816687191","encerramento":"2026-11-09T15:28:48.816708726","prazo":"2026-11-09T15:28:48.816716222"}]
+[
+  {
+    "id": 0,
+    "matriculaSolicitante": 0,
+    "emailSolicitante": "joao@gmail.com",
+    "titulo": "yuasdgbuiasdbas",
+    "descricao": "aujisdbsaubhd",
+    "situacao": "Finalizada",
+    "dataCriacao": "2026-11-11T22:53:55.95336703",
+    "encerramento": "2026-11-11T22:55:22.660436318",
+    "prazo": "2026-11-21T22:53:55.952846362",
+    "emailAvaliadorAlocado": "pedro@gmail.com",
+    "emailDesenvolvedorAlocado": "tiago@gmail.com"
+  },
+  {
+    "id": 1,
+    "matriculaSolicitante": 0,
+    "emailSolicitante": "joao@gmail.com",
+    "titulo": "Demanda maneira 1",
+    "descricao": "Demanda mais ou menos legalzinha",
+    "situacao": "Finalizada",
+    "dataCriacao": "2026-11-11T23:02:49.404738957",
+    "encerramento": "2026-11-11T23:05:25.701953552",
+    "prazo": "2026-11-26T23:03:06.683158043",
+    "emailAvaliadorAlocado": "pedro@gmail.com",
+    "emailDesenvolvedorAlocado": "tiago@gmail.com"
+  }
+]
