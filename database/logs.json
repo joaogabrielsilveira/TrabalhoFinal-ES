@@ -1,0 +1,72 @@
+[
+  {
+    "dataHora": "2026-11-12T20:51:15.543864587",
+    "nivel": "INFO",
+    "usuario": "joao@gmail.com",
+    "acao": "REGISTRO",
+    "detalhe": "Conta criada para João como Cliente."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.571720742",
+    "nivel": "INFO",
+    "usuario": "pedro@gmail.com",
+    "acao": "REGISTRO",
+    "detalhe": "Conta criada para Pedro como Avaliador."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.588980775",
+    "nivel": "INFO",
+    "usuario": "tiago@gmail.com",
+    "acao": "REGISTRO",
+    "detalhe": "Conta criada para Tiago como Desenvolvedor."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.605879519",
+    "nivel": "AVISO",
+    "usuario": "joao@gmail.com",
+    "acao": "LOGIN",
+    "detalhe": "Tentativa de login com credenciais incorretas."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.620475075",
+    "nivel": "INFO",
+    "usuario": "joao@gmail.com",
+    "acao": "LOGIN",
+    "detalhe": "Login do usuário João realizado com sucesso."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.635015372",
+    "nivel": "INFO",
+    "usuario": "joao@gmail.com",
+    "acao": "CRIAR_DEMANDA",
+    "detalhe": "Demanda \u0027Novo App Mobile\u0027 [ID 0] criada com prazo de 10 dias."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.650073715",
+    "nivel": "INFO",
+    "usuario": "pedro@gmail.com",
+    "acao": "ENCAMINHAR_DEMANDA",
+    "detalhe": "Demanda \u0027Novo App Mobile\u0027 [ID 0] encaminhada para o dev Tiago."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.665451467",
+    "nivel": "INFO",
+    "usuario": "tiago@gmail.com",
+    "acao": "CRIAR_TAREFA",
+    "detalhe": "Tarefa \u0027Modelar banco\u0027 [ID 1] vinculada à demanda ID 0."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.682005921",
+    "nivel": "INFO",
+    "usuario": "tiago@gmail.com",
+    "acao": "CONCLUIR_TAREFA",
+    "detalhe": "Tarefa \u0027Modelar banco\u0027 [ID 1] marcada como concluída."
+  },
+  {
+    "dataHora": "2026-11-12T20:51:15.695632724",
+    "nivel": "INFO",
+    "usuario": "joao@gmail.com",
+    "acao": "LOGOUT",
+    "detalhe": "Usuário João deslogou do sistema."
+  }
+]

@@ -34,6 +34,7 @@ public class Sistema {
     private static final Map<Integer, Demanda> demandas = new LinkedHashMap<>();  // chave: id
     private static final Map<Integer, Tarefa> tarefas = new LinkedHashMap<>();    // chave: id
     private static final List<Mensagem> mensagens = new ArrayList<>();
+    private static final List<Log> logs = new ArrayList<>();
 
     /** Lê o disco UMA vez. Depois disso, tudo vive em memória e só é gravado. */
     public Sistema() {
@@ -55,6 +56,9 @@ public class Sistema {
         Demanda.ID = demandas.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1) + 1;
         Tarefa.ID = tarefas.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
         Mensagem.ID = mensagens.stream().mapToInt(Mensagem::getId).max().orElse(-1) + 1;
+
+        logs.clear();
+        logs.addAll(Banco.carregarLogs());
     }
 
     // ---------------- Usuários ----------------
@@ -70,12 +74,16 @@ public class Sistema {
         }
         users.put(Usuario.normalizarEmail(u.getEmail()), u);
         salvarUsuarios();
+        registrarLog("INFO", u.getEmail(), "REGISTRO", 
+            String.format("Conta criada para %s (%s) como %s.", u.getNome(), u.getEmail(), u.getTipo()));
         return true;
     }
 
     public static void excluirUsuario(Usuario u) {
         users.remove(Usuario.normalizarEmail(u.getEmail()));
         salvarUsuarios();
+        registrarLog("AVISO", u.getEmail(), "EXCLUIR_USUARIO", 
+            String.format("Usuário %s (%s) excluído do sistema.", u.getNome(), u.getEmail()));
     }
 
     /** Mantido por compatibilidade: o objeto já está na memória, só precisa gravar. */
@@ -88,6 +96,8 @@ public class Sistema {
     public static void registrarDemanda(Demanda d) {
         demandas.put(d.getId(), d);
         salvarDemandas();
+        registrarLog("INFO", d.getEmailSolicitante(), "CRIAR_DEMANDA", 
+            String.format("Demanda '%s' [ID %d] criada com prazo de %d dias.", d.getTitulo(), d.getId(), d.getPrazo()));
     }
 
     public static Demanda getDemanda(int id) {
@@ -97,6 +107,8 @@ public class Sistema {
     public static void registrarTarefa(Tarefa t) {
         tarefas.put(t.getId(), t);
         salvarTarefas();
+        registrarLog("INFO", "SISTEMA", "CRIAR_TAREFA", 
+            String.format("Tarefa '%s' [ID %d] vinculada à demanda ID %d.", t.getTitulo(), t.getId(), t.getDemandaVinculada()));
     }
 
     public static List<Tarefa> getTarefas() {
@@ -117,6 +129,8 @@ public class Sistema {
     public static void registrarMensagem(Mensagem m) {
         mensagens.add(m);
         salvarMensagens();
+        registrarLog("INFO", m.getEmailRemetente(), "ENVIAR_MENSAGEM", 
+            String.format("Mensagem enviada para %s. Assunto: '%s'.", m.getEmailDestinatario(), m.getTitulo()));
     }
 
     /** Mais recentes primeiro. */
@@ -142,6 +156,100 @@ public class Sistema {
     public static void salvarDemandas()  { Banco.salvarDemandas(demandas.values()); }
     public static void salvarTarefas()   { Banco.salvarTarefas(tarefas.values()); }
     public static void salvarMensagens() { Banco.salvarMensagens(mensagens); }
+    public static void salvarLogs() { Banco.salvarLogs(logs); }
+
+    public static void registrarLog(String nivel, String usuario, String acao, String detalhe) {
+        Log novo = new Log(nivel, usuario, acao, detalhe);
+        logs.add(novo);
+        salvarLogs();
+    }
+
+    // Consulta (mais recentes primeiro)
+    public static List<Log> getLogs() {
+        List<Log> r = new ArrayList<>(logs);
+        java.util.Collections.reverse(r);
+        return r;
+    }
+
+    // Consultar log por nível
+    public static List<Log> consultarLogsPorNivel(String nivel) {
+        List<Log> r = new ArrayList<>();
+        if (nivel == null) return r;
+        // Percorre do mais recente para o mais antigo
+        for (int i = logs.size() - 1; i >= 0; i--) {
+            Log l = logs.get(i);
+            if (l.getNivel().equalsIgnoreCase(nivel.trim())) {
+                    r.add(l);
+            }
+        }
+        return r;
+    }
+
+    // Consultar logs por usuário (pelo email)
+    public static List<Log> consultarLogsPorUsuario(String email) {
+        List<Log> r = new ArrayList<>();
+        if (email == null) return r;
+        for (int i = logs.size() - 1; i >= 0; i--) {
+            Log l = logs.get(i);
+            if (l.getUsuario().equalsIgnoreCase(email.trim())) {
+                r.add(l);
+            }
+        }
+        return r;
+    }
+
+    // Consultar por tipo de ação
+    public static List<Log> consultarLogsPorAcao(String acao) {
+        List<Log> r = new ArrayList<>();
+        if (acao == null) return r;
+        for (int i = logs.size() - 1; i >= 0; i--) {
+            Log l = logs.get(i);
+            if (l.getAcao().equalsIgnoreCase(acao.trim())) {
+                r.add(l);
+            }
+        }
+        return r;
+    }
+
+    public void loopConsultaLogs() {
+        boolean ativo = true;
+        while (ativo) {
+            int escolha = lerEscolha(new String[]{
+                "Ver todos os logs",
+                "Filtrar por nível (INFO / AVISO)",
+                "Filtrar por usuário",
+                "Filtrar por ação (ex: LOGIN, CRIAR_DEMANDA)",
+                "Voltar"
+            });
+
+            switch (escolha) {
+                case 1:
+                    Log.imprimirLista(getLogs());
+                    break;
+                case 2:
+                    System.out.print("Digite o nível desejado (INFO ou AVISO): ");
+                    Log.imprimirLista(consultarLogsPorNivel(sc.nextLine()));
+                    break;
+                case 3:
+                    System.out.print("Digite o email do usuário: ");
+                    Log.imprimirLista(consultarLogsPorUsuario(sc.nextLine()));
+                    break;
+                case 4:
+                    System.out.print("Digite o nome da ação: ");
+                    Log.imprimirLista(consultarLogsPorAcao(sc.nextLine()));
+                    break;
+                default:
+                    ativo = false;
+                    break;
+            }
+
+            if (ativo) {
+                System.out.println("\nPressione Enter para continuar...");
+                sc.nextLine();
+                limparConsole();
+            }
+        }
+    }
 
     public boolean login(String email, String senha) {
         
@@ -237,6 +345,8 @@ public class Sistema {
 
         registrarUsuario(novo);
         System.out.println(String.format("Conta registrada com sucesso para o usuário %s", nome));
+        registrarLog("INFO", email, "REGISTRO", 
+            String.format("Conta registrada com sucesso para o usuário %s (%s).", nome, novo.getTipo()));
         return true;
     }
 
@@ -248,10 +358,12 @@ public class Sistema {
         boolean sucesso = login(email, senha);
         if (!sucesso) {
             System.out.println("Usuário ou senha incorretos, tente novamente");
+            registrarLog("AVISO", email, "LOGIN", "Tentativa de login com credenciais incorretas.");
         }
         else {
             user = getUsuario(email);
             System.out.println(String.format("Login do usuário %s realizado com sucesso.", user.getNome()));
+            registrarLog("INFO", email, "LOGIN", String.format("Login do usuário %s realizado com sucesso.", user.getNome()));
         }
 
         return sucesso;
@@ -489,7 +601,7 @@ public class Sistema {
                     } else {
                         boolean eraRetornada = d.getSituacao() == StatusDemanda.Retornada;
                         try {
-                            ((Cliente)user).atualizarDemanda(d, novoConteudo, novoPrazo);
+                        ((Cliente)user).atualizarDemanda(d, novoConteudo, novoPrazo);
                             System.out.println(eraRetornada
                                 ? "Demanda atualizada e reenviada ao avaliador."
                                 : "Demanda atualizada com sucesso.");
@@ -521,12 +633,16 @@ public class Sistema {
                         System.out.println("Nenhum desenvolvedor cadastrado para receber a demanda.");
                     } else {
                         System.out.println("Demanda encaminhada para o desenvolvedor: " + dev.getNome());
+                        registrarLog("INFO", user.getEmail(), "ENCAMINHAR_DEMANDA", 
+                            String.format("Demanda '%s' [ID %d] encaminhada para o dev %s.", d.getTitulo(), d.getId(), dev.getNome()));
                     }
                 }
                 else if (escolhaAcao == 2) {
                     System.out.println("Digite o motivo do retorno da demanda: ");
                     String motivoRetorno = Sistema.sc.nextLine();
                     ((Avaliador)user).retornarDemanda(d, motivoRetorno);
+                    registrarLog("AVISO", user.getEmail(), "RETORNAR_DEMANDA", 
+                        String.format("Demanda '%s' [ID %d] retornada com motivo: %s.", d.getTitulo(), d.getId(), motivoRetorno));
                 }
                 else if (escolhaAcao == 3) {
                     System.out.println("Digite o motivo do cancelamento da demanda: ");
@@ -571,9 +687,13 @@ public class Sistema {
                 
                     ((Desenvolvedor)user).atualizarTarefa(t, novoConteudo);
                     System.out.println("Tarefa atualizada com sucesso.");
+                    registrarLog("INFO", user.getEmail(), "EDITAR_TAREFA", 
+                    String.format("Tarefa '%s' [ID %d] da demanda %d atualizada com nova descrição.", t.getTitulo(), t.getId(), t.getDemandaVinculada()));
                 }
                 else if (escolhaEdicao == 2) {
                     ((Desenvolvedor)user).finalizarTarefa(t);
+                    registrarLog("INFO", user.getEmail(), "CONCLUIR_TAREFA", 
+                        String.format("Tarefa '%s' [ID %d] marcada como concluída.", t.getTitulo(), t.getId()));
                     System.out.println("Tarefa finalizada com sucesso.");
                 }
             }
@@ -617,6 +737,8 @@ public class Sistema {
                     if (confirmacao.equals("SIM")) {
                         ((Desenvolvedor)user).entregarDemanda(d);
                         System.out.println("Demanda entregue com sucesso.");
+                        registrarLog("INFO", user.getEmail(), "FINALIZAR_DEMANDA", 
+                            String.format("Demanda '%s' [ID %d] finalizada e entregue pelo desenvolvedor.", d.getTitulo(), d.getId()));
                     }
                     else {
                         System.out.println("Confirmação não sucedida.");
@@ -648,6 +770,7 @@ public class Sistema {
             escolha = lerEscolha(opcoes);
             if (escolha == opcoes.length) {
                 System.out.println(String.format("Usuário %s deslogado com sucesso", user.getNome()));
+                registrarLog("INFO", user.getEmail(), "LOGOUT", String.format("Usuário %s deslogou do sistema.", user.getNome()));
                 user = null;
                 ativo = false;
             }
@@ -694,7 +817,7 @@ public class Sistema {
         boolean ativo = true;
         int escolha;
         while (ativo) {
-            escolha = lerEscolha(new String[] {"Login", "Criar conta", "Sair"});
+            escolha = lerEscolha(new String[] {"Login", "Criar conta", "Consultar Logs do Sistema", "Sair"});
             switch (escolha) {
                 case 1:
                     if (loopLogin()) {
@@ -708,6 +831,9 @@ public class Sistema {
                     loopRegistro();
                     break;
                 case 3:
+                    loopConsultaLogs();
+                    break;
+                case 4:
                     ativo = false;
                     break;
                 default:
