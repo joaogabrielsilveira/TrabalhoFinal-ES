@@ -15,7 +15,6 @@ public class Main {
             s.registrarUsuario(ava);
             s.registrarUsuario(dev);
 
-            rem.enviarMensagem("Mensagem1", "Opa cara te mandando uma mensagem numero 1 valeu", dest);
         }
 
         s.loopSistema();

@@ -42,7 +42,10 @@ public class Sistema {
         tarefas.clear();
         mensagens.clear();
 
-        for (Usuario u : Banco.carregarUsuarios()) users.put(u.getEmail(), u);
+        for (Usuario u : Banco.carregarUsuarios()) {
+            u.aposCarregar(); // o Gson não chama construtores: garante listas não nulas
+            users.put(Usuario.normalizarEmail(u.getEmail()), u);
+        }
         for (Demanda d : Banco.carregarDemandas()) demandas.put(d.getId(), d);
         for (Tarefa t : Banco.carregarTarefas()) tarefas.put(t.getId(), t);
         mensagens.addAll(Banco.carregarMensagens());
@@ -58,21 +61,20 @@ public class Sistema {
 
     public static Usuario getUsuario(String email) {
         if (email == null) return null;
-        return users.get(email);
+        return users.get(Usuario.normalizarEmail(email));
     }
 
     public boolean registrarUsuario(Usuario u) {
-        if (users.containsKey(u.getEmail())) {
+        if (users.containsKey(Usuario.normalizarEmail(u.getEmail()))) {
             return false;
         }
-        users.put(u.getEmail(), u);
+        users.put(Usuario.normalizarEmail(u.getEmail()), u);
         salvarUsuarios();
         return true;
     }
 
     public static void excluirUsuario(Usuario u) {
-        // Demais operações (demandas, mensagens...) ficam como TODO, como no original
-        users.remove(u.getEmail());
+        users.remove(Usuario.normalizarEmail(u.getEmail()));
         salvarUsuarios();
     }
 
@@ -184,11 +186,26 @@ public class Sistema {
         return valid ? escolha : -1;
     }
 
+    /** Lê um inteiro sem derrubar o programa se o usuário digitar texto. Devolve -1 se inválido. */
+    public static int lerInteiro(String prompt) {
+        System.out.println(prompt);
+        String linha = sc.nextLine().trim();
+        try {
+            return Integer.parseInt(linha);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
     public boolean loopRegistro() {
         System.out.print("Digite o nome de usuário: ");
-        String nome = sc.nextLine();
+        String nome = sc.nextLine().trim();
         System.out.print("Digite o email de usuário: ");
-        String email = sc.nextLine();
+        String email = sc.nextLine().trim();
+        if (nome.isEmpty() || email.isEmpty()) {
+            System.out.println("Nome e email não podem ser vazios. Não foi possível registrar.");
+            return false;
+        }
         Usuario existente = getUsuario(email);
         if (existente != null) {
             System.out.println("Usuário com esse email já existe. Não foi possível registrar.");
@@ -197,6 +214,10 @@ public class Sistema {
 
         System.out.print("Digite a senha: ");
         String senha = sc.nextLine();
+        if (senha.isEmpty()) {
+            System.out.println("A senha não pode ser vazia. Não foi possível registrar.");
+            return false;
+        }
 
         System.out.println("Escolha o tipo de conta: ");
         int escolhaTipo = -1;
@@ -261,13 +282,16 @@ public class Sistema {
             T[] itens = fornecedorItens.get(); 
             
             int numItens = itens.length;
-            int start = page * listLength;
-            int end = Math.min(start + listLength, numItens);
 
             if (itens.length == 0) {
                 System.out.println("Nenhuma opção disponível.");
                 return;
             }
+
+            // A lista pode ter encolhido (ex.: item aprovado/removido): mantém a página válida
+            page = Math.min(page, (numItens - 1) / listLength);
+            int start = page * listLength;
+            int end = Math.min(start + listLength, numItens);
             
             List<String> opcoes = new ArrayList<>();
             for (int i = start; i < end; i++) {
@@ -282,9 +306,11 @@ public class Sistema {
             opcoes.add("Voltar");
             
             int escolhaMsg = lerEscolha(opcoes.toArray(new String[0]));
-            if (escolhaMsg == opcoes.size() || escolhaMsg == -1) {
+            if (escolhaMsg == -1) {
+                continue; // escolha inválida: pede de novo em vez de sair da lista
+            } else if (escolhaMsg == opcoes.size()) {
                 ativo = false;
-            } else if (escolhaMsg != -1) {
+            } else {
                 if (escolhaMsg <= (end - start)) {
                     T itemSelecionado = itens[start + escolhaMsg - 1];
                     acaoAoVisualizar.accept(itemSelecionado);
@@ -323,7 +349,7 @@ public class Sistema {
                 System.out.println(getMessageString(m, true, false));
                 if (escolha == 1) {
                     m.setLida();
-                    salvarMensagens(); // getConteudo() marcou a mensagem como lida
+                    salvarMensagens(); // grava o estado "lida"
                     int escolhaResposta = lerEscolha(new String[]{"Responder", "Voltar"});
                     if (escolhaResposta == 1) {
                         Usuario destUser = getUsuario(m.getEmailRemetente());
@@ -356,8 +382,10 @@ public class Sistema {
                     () -> {
                         destinatarios.clear();
                         for (Demanda d : ((Cliente)user).getDemandasSolicitadas()) {
-                            if (d.getSituacao() == StatusDemanda.EmAndamento && getUsuario(d.getEmailDesenvolvedor()) != null)
-                                destinatarios.add(getUsuario(d.getEmailDesenvolvedor()));
+                            Usuario dev = getUsuario(d.getEmailDesenvolvedor());
+                            // distinct: o mesmo desenvolvedor pode ter várias demandas do cliente
+                            if (d.getSituacao() == StatusDemanda.EmAndamento && dev != null && !destinatarios.contains(dev))
+                                destinatarios.add(dev);
                         }
 
                         return destinatarios.toArray(new Usuario[0]);
@@ -373,11 +401,8 @@ public class Sistema {
                     }
                 );
                 break;
-            case Desenvolvedor:
-                break;
-            case Avaliador:
-                break;
             default:
+                System.out.println("Seu perfil só pode responder mensagens recebidas (caixa de entrada > Responder).");
                 break;
         }
         
@@ -406,9 +431,11 @@ public class Sistema {
         String titulo = Sistema.sc.nextLine();
         System.out.println("Digite a descrição da demanda: ");
         String descricao = Sistema.sc.nextLine();
-        System.out.println("Digite o prazo da demanda (em dias): ");
-        int prazo = Sistema.sc.nextInt();
-        Sistema.sc.nextLine();
+        int prazo = lerInteiro("Digite o prazo da demanda (em dias): ");
+        if (prazo <= 0) {
+            System.out.println("Prazo inválido: informe um número inteiro de dias maior que zero.");
+            return;
+        }
 
         Demanda d = ((Cliente)user).solicitarDemanda(titulo, descricao, prazo);
         System.out.println("Demanda criada com sucesso, ID: " + d.getId());
@@ -437,18 +464,38 @@ public class Sistema {
             // 3. Consumer: o que fazer ao clicar
             d -> {
                 System.out.println(getDemandaString(d, true));
+
+                // Regra: só Aberta ou Retornada pode ser editada pelo solicitante
+                if (!d.podeSerEditada()) {
+                    if (d.getSituacao() == StatusDemanda.Cancelada) {
+                        System.out.println("\nEsta demanda foi cancelada pelo avaliador: não pode ser editada nem reenviada, apenas visualizada.");
+                    } else {
+                        System.out.println("\nEsta demanda não pode mais ser editada (situação: " + d.getSituacao() + ").");
+                    }
+                    lerEscolha(new String[]{"Voltar"});
+                    return;
+                }
+                if (d.getSituacao() == StatusDemanda.Retornada) {
+                    System.out.println("\nDemanda retornada: ao salvar a edição ela será reenviada automaticamente ao avaliador que a retornou.");
+                }
+
                 int escolhaEdicao = lerEscolha(new String[]{"Editar", "Voltar"});
                 if (escolhaEdicao == 1) {
                     System.out.println("Digite o novo conteúdo da demanda: ");
                     String novoConteudo = Sistema.sc.nextLine();
-                    System.out.println("Digite o novo prazo da demanda (em dias): ");
-                    int novoPrazo = Sistema.sc.nextInt();
-                    Sistema.sc.nextLine();
-                    if (novoPrazo < 0 || novoPrazo < d.getPrazo()) {
-                        System.out.println("Prazo inválido, deve ser maior que o atual.");
+                    int novoPrazo = lerInteiro("Digite o novo prazo da demanda (em dias): ");
+                    if (novoPrazo <= 0 || novoPrazo < d.getPrazo()) {
+                        System.out.println("Prazo inválido, deve ser um número de dias maior ou igual ao prazo atual.");
                     } else {
-                        ((Cliente)user).atualizarDemanda(d, novoConteudo, novoPrazo);
-                        System.out.println("Demanda atualizada com sucesso.");
+                        boolean eraRetornada = d.getSituacao() == StatusDemanda.Retornada;
+                        try {
+                            ((Cliente)user).atualizarDemanda(d, novoConteudo, novoPrazo);
+                            System.out.println(eraRetornada
+                                ? "Demanda atualizada e reenviada ao avaliador."
+                                : "Demanda atualizada com sucesso.");
+                        } catch (IllegalStateException | IllegalArgumentException e) {
+                            System.out.println("Não foi possível editar: " + e.getMessage());
+                        }
                     }
                 }
             }
@@ -467,7 +514,7 @@ public class Sistema {
             
             d -> {
                 System.out.println(getDemandaString(d, true));
-                int escolhaAcao = lerEscolha(new String[]{"Aprovar", "Reprovar", "Voltar"});
+                int escolhaAcao = lerEscolha(new String[]{"Aprovar", "Reprovar", "Cancelar", "Voltar"});
                 if (escolhaAcao == 1) {
                     Desenvolvedor dev = ((Avaliador)user).encaminharDemanda(d);
                     if (dev == null) {
@@ -480,6 +527,18 @@ public class Sistema {
                     System.out.println("Digite o motivo do retorno da demanda: ");
                     String motivoRetorno = Sistema.sc.nextLine();
                     ((Avaliador)user).retornarDemanda(d, motivoRetorno);
+                }
+                else if (escolhaAcao == 3) {
+                    System.out.println("Digite o motivo do cancelamento da demanda: ");
+                    String motivoCancelamento = Sistema.sc.nextLine();
+                    System.out.println("O cancelamento é definitivo: a demanda não poderá mais ser editada nem reenviada.");
+                    System.out.println("Digite 'SIM' para confirmar: ");
+                    if (sc.nextLine().equals("SIM")) {
+                        ((Avaliador)user).cancelarDemanda(d, motivoCancelamento);
+                        System.out.println("Demanda cancelada.");
+                    } else {
+                        System.out.println("Cancelamento não confirmado.");
+                    }
                 }
             }
         );
@@ -533,6 +592,13 @@ public class Sistema {
             
             d -> {
                 System.out.println(getDemandaString(d, true));
+
+                if (d.getSituacao() != StatusDemanda.EmAndamento) {
+                    System.out.println("\nDemanda já finalizada: nenhuma ação disponível.");
+                    lerEscolha(new String[]{"Voltar"});
+                    return;
+                }
+
                 int escolhaAcao = lerEscolha(new String[]{"Criar tarefa", "Gerenciar tarefas", "Entregar demanda", "Voltar"});
                 if (escolhaAcao == 1) {
                     System.out.print("Digite o título da tarefa: ");

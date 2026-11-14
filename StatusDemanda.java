@@ -3,5 +3,6 @@ public enum StatusDemanda {
     Aprovada,
     Retornada,
     EmAndamento,
-    Finalizada
+    Finalizada,
+    Cancelada
 }

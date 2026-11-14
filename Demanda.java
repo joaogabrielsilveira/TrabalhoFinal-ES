@@ -50,9 +50,17 @@ public class Demanda {
         this.situacao = situacao;
     }
 
+    /**
+     * Cancelamento definitivo (feito pelo avaliador). Só vale para demandas que ainda não
+     * foram aprovadas (Aberta ou Retornada). Depois disso a demanda não pode ser editada,
+     * reenviada nem reaberta: o solicitante só pode visualizá-la.
+     */
     public void cancelarDemanda() {
-
-
+        if (this.situacao != StatusDemanda.Aberta && this.situacao != StatusDemanda.Retornada) {
+            throw new IllegalStateException("Demanda na situação " + this.situacao + " não pode ser cancelada.");
+        }
+        this.situacao = StatusDemanda.Cancelada;
+        this.encerramento = LocalDateTime.now();
     }
 
     public int getMatriculaSolicitante() {
@@ -68,9 +76,17 @@ public class Demanda {
         return Sistema.getTarefasDaDemanda(this.id);
     }
 
+    /** Só demandas Abertas ou Retornadas podem ser editadas pelo solicitante. */
+    public boolean podeSerEditada() {
+        return this.situacao == StatusDemanda.Aberta || this.situacao == StatusDemanda.Retornada;
+    }
+
     public void editarDados(String novoConteudo, LocalDateTime novoPrazo) {
+        if (!podeSerEditada()) {
+            throw new IllegalStateException("Demanda na situação " + this.situacao + " não pode ser editada.");
+        }
         this.descricao = novoConteudo;
-        this.prazo = novoPrazo;        
+        this.prazo = novoPrazo;
     }
 
     public void checarPrazo() {

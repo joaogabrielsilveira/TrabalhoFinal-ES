@@ -16,11 +16,22 @@ public class Usuario {
         this.matricula = ID;
         ID++;
         this.nome = nome;
-        this.email = email;
+        this.email = normalizarEmail(email);
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         this.senha = encoder.encode(senha);
         this.type = tipo;
     }
+
+    /** Email é a chave de busca: ignora maiúsculas/minúsculas e espaços nas pontas. */
+    public static String normalizarEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+
+    /**
+     * O Gson cria objetos SEM chamar o construtor, então listas ausentes no JSON ficam null.
+     * O Sistema chama este método em todo usuário carregado; as subclasses inicializam suas listas.
+     */
+    public void aposCarregar() {}
 
     /** Chamado pelo Sistema ao carregar o banco, para não repetir matrículas. */
     public static void restaurarContador(int proximo) {
@@ -38,6 +49,7 @@ public class Usuario {
     }
 
     public void enviarMensagem(String titulo, String conteudo, Usuario destinatario) {
+        if (destinatario == null) return; // ex.: usuário excluído; evita NullPointerException
         Mensagem nova = new Mensagem(titulo, conteudo, this, destinatario);
         Sistema.registrarMensagem(nova);
     }

@@ -1,7 +1,9 @@
 import com.google.gson.*;
 import java.lang.reflect.Type;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -113,7 +115,16 @@ public class Banco {
     private static void gravar(String caminho, String conteudo) {
         try {
             Files.createDirectories(Path.of(DIR));
-            Files.writeString(Path.of(caminho), conteudo);
+            // Escrita atômica: grava num .tmp e troca de nome. Se o programa cair no meio da
+            // gravação, o arquivo original continua íntegro (antes ele ficava truncado/corrompido).
+            Path destino = Path.of(caminho);
+            Path temporario = Path.of(caminho + ".tmp");
+            Files.writeString(temporario, conteudo);
+            try {
+                Files.move(temporario, destino, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporario, destino, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (Exception e) {
             System.out.println("ERRO ao gravar " + caminho + ": " + e.getMessage());
         }

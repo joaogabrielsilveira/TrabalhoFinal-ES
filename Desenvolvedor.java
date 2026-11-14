@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class Desenvolvedor extends Usuario {
@@ -12,19 +13,35 @@ public class Desenvolvedor extends Usuario {
         this.idsDemandasAtribuidas = new ArrayList<>();
     }
 
+    /** O Gson não chama construtores: listas ausentes no JSON ficariam null. */
+    @Override
+    public void aposCarregar() {
+        if (idsDemandasAtribuidas == null) idsDemandasAtribuidas = new ArrayList<>();
+    }
+
     public Tarefa criarTarefa(String titulo, String descricao, Demanda demandaSelecionada) {
+        exigirDemandaAtiva(demandaSelecionada);
         Tarefa tarefa = new Tarefa(titulo, descricao, demandaSelecionada);
         Sistema.registrarTarefa(tarefa);
         return tarefa;
     }
 
     public void receberDemanda(Demanda demanda) {
-        idsDemandasAtribuidas.add(demanda.getId());
+        if (!idsDemandasAtribuidas.contains(demanda.getId())) {
+            idsDemandasAtribuidas.add(demanda.getId());
+        }
         Sistema.atualizarUsuario(this);
     }
 
     public List<Demanda> getDemandasAtribuidas() {
-        return idsDemandasAtribuidas.stream().map(Sistema::getDemanda).collect(Collectors.toList());
+        return idsDemandasAtribuidas.stream().map(Sistema::getDemanda).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    /** Quantidade de demandas ainda em andamento (usada para balancear a distribuição). */
+    public int getCargaAtual() {
+        return (int) getDemandasAtribuidas().stream()
+            .filter(d -> d.getSituacao() == StatusDemanda.EmAndamento)
+            .count();
     }
 
     public List<Tarefa> getTarefasAtribuidas() {
@@ -39,6 +56,8 @@ public class Desenvolvedor extends Usuario {
     }
 
     public Demanda entregarDemanda(Demanda demandaEntregue) {
+        exigirDemandaAtiva(demandaEntregue);
+
         demandaEntregue.finalizarDemanda();
         Sistema.removerTarefasDaDemanda(demandaEntregue.getId());
         Sistema.salvarDemandas();
@@ -56,5 +75,15 @@ public class Desenvolvedor extends Usuario {
     public void finalizarTarefa(Tarefa t) {
         t.setStatus(StatusTarefa.Concluida);
         Sistema.salvarTarefas();
+    }
+
+    /** A demanda precisa ser deste desenvolvedor e estar em andamento (não finalizada). */
+    private void exigirDemandaAtiva(Demanda d) {
+        if (d == null || !idsDemandasAtribuidas.contains(d.getId())) {
+            throw new IllegalStateException("A demanda não está atribuída a este desenvolvedor.");
+        }
+        if (d.getSituacao() != StatusDemanda.EmAndamento) {
+            throw new IllegalStateException("A demanda não está em andamento (situação: " + d.getSituacao() + ").");
+        }
     }
 }
