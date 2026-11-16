@@ -138,4 +138,7 @@ public class Demanda {
         this.encerramento = LocalDateTime.now();
     }
 
+    public static void resetarContador() {
+        ID = 0;
+    }
 }

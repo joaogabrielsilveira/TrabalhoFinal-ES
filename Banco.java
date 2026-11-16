@@ -20,13 +20,20 @@ import java.util.List;
  */
 public class Banco {
 
-    private static final String DIR = "database";
-    private static final String ARQ_USUARIOS = DIR + "/usuarios.json";
-    private static final String ARQ_DEMANDAS = DIR + "/demandas.json";
-    private static final String ARQ_TAREFAS = DIR + "/tarefas.json";
-    private static final String ARQ_MENSAGENS = DIR + "/mensagens.json";
-    private static final String ARQ_LOGS = DIR + "/logs.json";
+    private static String DIR = "database";
+    private static final String ARQ_USUARIOS = "usuarios.json";
+    private static final String ARQ_DEMANDAS = "demandas.json";
+    private static final String ARQ_TAREFAS = "tarefas.json";
+    private static final String ARQ_MENSAGENS = "mensagens.json";
+    private static final String ARQ_LOGS = "logs.json";
 
+    public static void setDiretorio(String novoDir) {
+        DIR = (novoDir != null && !novoDir.isBlank()) ? novoDir : "database";
+    }
+
+    private static String caminho(String arquivo) {
+        return Path.of(DIR, arquivo).toString();
+    }
 
     private static final Gson gson = new GsonBuilder()
         .setPrettyPrinting()
@@ -106,29 +113,33 @@ public class Banco {
 
     // ---------- I/O ----------
 
-    private static String ler(String caminho) {
+    private static String ler(String arquivo) {
         try {
-            return Files.readString(Path.of(caminho));
+            return Files.readString(Path.of(caminho(arquivo)));
         } catch (Exception e) {
             return "[]";
         }
     }
 
-    private static void gravar(String caminho, String conteudo) {
+    private static void gravar(String arquivo, String conteudo) {
         try {
             Files.createDirectories(Path.of(DIR));
-            // Escrita atômica: grava num .tmp e troca de nome. Se o programa cair no meio da
-            // gravação, o arquivo original continua íntegro (antes ele ficava truncado/corrompido).
-            Path destino = Path.of(caminho);
-            Path temporario = Path.of(caminho + ".tmp");
+
+            Path destino = Path.of(caminho(arquivo));
+            Path temporario = Path.of(caminho(arquivo) + ".tmp");
+
             Files.writeString(temporario, conteudo);
+
             try {
-                Files.move(temporario, destino, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                Files.move(temporario, destino,
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
             } catch (AtomicMoveNotSupportedException e) {
-                Files.move(temporario, destino, StandardCopyOption.REPLACE_EXISTING);
+                Files.move(temporario, destino,
+                    StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception e) {
-            System.out.println("ERRO ao gravar " + caminho + ": " + e.getMessage());
+            System.out.println("ERRO ao gravar " + arquivo + ": " + e.getMessage());
         }
     }
 
